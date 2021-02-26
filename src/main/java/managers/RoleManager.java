@@ -1,5 +1,6 @@
 package managers;
 
+import logger.ErrorLogger;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;

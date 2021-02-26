@@ -1,10 +1,9 @@
 package listeners;
 
 import managers.QuotesManager;
+import managers.VoiceChannelManager;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
@@ -13,19 +12,24 @@ import java.util.Arrays;
 public class CommandListener extends ListenerAdapter {
 
     private static final String COMMAND_FLAG = "!";
+    private static final String MUST_BE_IN_VC_MESSAGE = "Must be in a voice channel to use this command.";
 
     private QuotesManager qm;
+    private VoiceChannelManager vcm;
     private EmbedBuilder embedBuilder;
 
-    public CommandListener(QuotesManager qm) {
+    public CommandListener(QuotesManager qm, VoiceChannelManager vcm) {
         this.qm = qm;
+        this.vcm = vcm;
         embedBuilder = new EmbedBuilder();
     }
 
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
         Message message = event.getMessage();
+        Member member = event.getMember();
         User user = event.getAuthor();
+        VoiceChannel vc = member.getVoiceState().getChannel();
         TextChannel defaultChannel = event.getTextChannel();
 
         String[] messageArray = message.getContentRaw().split("\\s+");
@@ -49,10 +53,57 @@ public class CommandListener extends ListenerAdapter {
                         for (String word : args) {
                             quote += word + " ";
                         }
+                        quote = quote.substring(0, quote.length()-1);
                         qm.addQuote(event.getGuild(), quote);
                         defaultChannel.sendMessage("Quote added!").queue();
                     }
                     break;
+
+                case COMMAND_FLAG + "maxusers":
+                    if (vc != null) {
+                        if (args.length == 0) {
+                            vc.getManager().setUserLimit(0);
+                            defaultChannel.sendMessage("Reset user limit.").queue();
+                        } else if (args.length == 1) {
+                            defaultChannel.sendMessage("Incorrect usage of `" + command + "`.");
+                        } else {
+                            int maxUsers = 0;
+                            try {
+                                maxUsers = Integer.parseInt(args[0]);
+                            } catch (NumberFormatException ex) {
+                                ex.printStackTrace(); // we used malformed arguments :(
+                            }
+                            if (maxUsers > 0) {
+                                if (vcm.isCreatedVoiceChannel(vc)) {
+                                    vc.getManager().setUserLimit(maxUsers).queue();
+                                    defaultChannel.sendMessage("Set max users to " + maxUsers + "!").queue();
+                                } else {
+                                    defaultChannel.sendMessage("Can only change user limit of on-demand channels.").queue();
+                                }
+                            } else {
+                                defaultChannel.sendMessage("Number of users must be a positive integer.").queue();
+                            }
+                        }
+                    } else {
+                        defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();
+                    }
+                    break;
+
+                case COMMAND_FLAG + "title":
+                    if (vc != null) {
+                        if (args.length == 0) {
+                            // reset naming to standard naming convention
+                            vcm.setStandardChannelName(vc);
+                        } else {
+                            // set custom title
+                            String customTitle = "";
+                            for (String word : args) customTitle += word + " ";
+                            customTitle = customTitle.substring(0, customTitle.length()-1);
+                            vcm.setCustomChannelName(vc, customTitle);
+                        }
+                    } else {
+                        defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();
+                    }
             }
         }
     }

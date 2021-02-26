@@ -2,6 +2,7 @@ import listeners.CommandListener;
 import listeners.PresenceListener;
 import listeners.ReactionListener;
 import listeners.VoiceChannelListener;
+import logger.ErrorLogger;
 import managers.QuotesManager;
 import managers.RoleManager;
 import managers.VoiceChannelManager;
@@ -25,8 +26,9 @@ public class Main {
         jda.enableIntents(GatewayIntent.GUILD_MESSAGES);
         jda.enableIntents(GatewayIntent.GUILD_PRESENCES);
         jda.enableCache(CacheFlag.ACTIVITY);
+        jda.enableCache(CacheFlag.VOICE_STATE);
 
-        jda.addEventListeners(new CommandListener(quotesManager));
+        jda.addEventListeners(new CommandListener(quotesManager, voiceChannelManager));
         jda.addEventListeners(new ReactionListener(roleManager));
         jda.addEventListeners(new VoiceChannelListener(voiceChannelManager));
         jda.addEventListeners(new PresenceListener(voiceChannelManager));

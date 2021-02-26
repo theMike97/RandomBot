@@ -1,11 +1,11 @@
 package managers;
 
+import logger.ErrorLogger;
 import net.dv8tion.jda.api.entities.*;
 
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.List;
 
 public class VoiceChannelManager {
@@ -20,6 +20,7 @@ public class VoiceChannelManager {
             "Certain",
             "Clear",
             "Different",
+            "Depraved",
             "Early",
             "Easy",
             "Economic",
@@ -168,12 +169,15 @@ public class VoiceChannelManager {
             "Cockroach",
             "Centipede",
             "Worm",
-            "Louse"
+            "Louse",
+            "Human"
     };
+    public static final boolean CUSTOM_TITLE = true;
+    public static final boolean STANDARD_TITLE = false;
 
-    // key, value = <"vc id", "generic name">
-    private HashMap<String, String> vcNameCache;
     private ArrayList<VoiceChannel> voiceChannels;
+    private HashMap<String, String> vcNameCache; // key, value = <"vc id", "generic name">
+    private HashMap<String, Boolean> customTitleMap; // key, value = <"vc id", custom title>
 
     /**
      * Constructor
@@ -181,6 +185,7 @@ public class VoiceChannelManager {
     public VoiceChannelManager() {
         voiceChannels = new ArrayList<>(); // contains vc created by on demand
         vcNameCache = new HashMap<>();
+        customTitleMap = new HashMap<>();
     }
 
     /**
@@ -205,6 +210,7 @@ public class VoiceChannelManager {
     public void addVoiceChannel(VoiceChannel vc, String genericName) {
         voiceChannels.add(vc);
         vcNameCache.put(vc.getId(), genericName); // remember randomly generated voice name in case ppl stop playing a game
+        customTitleMap.put(vc.getId(), STANDARD_TITLE);
         System.out.println("\"" + vc.getName() + "\" created.");
         System.out.println("vcNameCache current state: " + vcNameCache);
     }
@@ -212,6 +218,7 @@ public class VoiceChannelManager {
     public void removeVoiceChannel(VoiceChannel vc) {
         voiceChannels.remove(vc);
         vcNameCache.remove(vc.getId());
+        customTitleMap.remove(vc.getId());
         System.out.println("\"" + vc.getName() + "\" removed.");
         System.out.println("vcNameCache current state: " + vcNameCache);
     }
@@ -229,7 +236,7 @@ public class VoiceChannelManager {
         String genericName = getAdjective() + " " + getAnimal();
 
         /*
-        get user activity.  only change channel name to a default activity
+        get user activity.  prioritize channel name to default type
          */
         Activity primaryActivity = getPrimaryMemberActivity(member);
         String vcName = (primaryActivity == null) ? genericName : primaryActivity.getName();
@@ -250,6 +257,7 @@ public class VoiceChannelManager {
             }
             if (activity.getType().equals(Activity.ActivityType.DEFAULT)) {
                 primaryActivity = activity;
+                return primaryActivity;
             }
         }
 
@@ -307,9 +315,28 @@ public class VoiceChannelManager {
         return primaryActivity;
     }
 
+    public void setCustomChannelName(VoiceChannel vc, String name) {
+        customTitleMap.replace(vc.getId(), CUSTOM_TITLE);
+        // if vc is not named correctly, name it correctly
+        if (!vc.getName().equals(name)) {
+            vc.getManager().setName(name).queue();
+            System.out.println("voice channel name changed");
+        }
+    }
+
+    public void setStandardChannelName(VoiceChannel vc) {
+        customTitleMap.replace(vc.getId(), STANDARD_TITLE);
+        setVoiceChannelName(vc);
+    }
+
     public void setVoiceChannelName(VoiceChannel vc) {
         Activity primaryActivity = getPrimaryVoiceChannelActivity(vc);
-        String gameActivity = (primaryActivity == null) ? null : primaryActivity.getName();
+        String gameActivity = null;
+        if (customTitleMap.get(vc.getId()) == STANDARD_TITLE) {
+            gameActivity = (primaryActivity == null) ? null : primaryActivity.getName();
+        } else {
+            gameActivity = vc.getName();
+        }
 
         // if vc is not named correctly, name it correctly
         if (!vc.getName().equals(gameActivity)) {

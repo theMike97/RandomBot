@@ -3,7 +3,6 @@ package managers;
 import logger.ErrorLogger;
 import net.dv8tion.jda.api.entities.*;
 
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -320,7 +319,7 @@ public class VoiceChannelManager {
         // if vc is not named correctly, name it correctly
         if (!vc.getName().equals(name)) {
             vc.getManager().setName(name).queue();
-            System.out.println("voice channel name changed");
+            System.out.println("voice channel name changed to \"" + name + "\".");
         }
     }
 
@@ -346,7 +345,7 @@ public class VoiceChannelManager {
                 // if there is no game being played, set to original random name
                 vc.getManager().setName(vcNameCache.get(vc.getId())).queue();
             }
-            System.out.println("voice channel name changed");
+            System.out.println("voice channel name changed.");
         }
     }
 }

@@ -27,16 +27,17 @@ public class CommandListener extends ListenerAdapter {
     @Override
     public void onMessageReceived(MessageReceivedEvent event) {
         Message message = event.getMessage();
-        Member member = event.getMember();
         User user = event.getAuthor();
-        VoiceChannel vc = member.getVoiceState().getChannel();
-        TextChannel defaultChannel = event.getTextChannel();
-
-        String[] messageArray = message.getContentRaw().split("\\s+");
-        String command = messageArray[0];
-        String[] args = Arrays.copyOfRange(messageArray, 1, messageArray.length); //O(n)
 
         if (message.getChannelType().isGuild() && !user.isBot()) {
+            Member member = event.getMember();
+            VoiceChannel vc = (member.getVoiceState() == null) ? null : member.getVoiceState().getChannel();
+            TextChannel defaultChannel = event.getTextChannel();
+
+            String[] messageArray = message.getContentRaw().split("\\s+");
+            String command = messageArray[0];
+            String[] args = Arrays.copyOfRange(messageArray, 1, messageArray.length); //O(n)
+
             switch (command) {
                 case COMMAND_FLAG + "help":
                     user.openPrivateChannel().queue((channel) -> {
@@ -62,11 +63,9 @@ public class CommandListener extends ListenerAdapter {
                 case COMMAND_FLAG + "maxusers":
                     if (vc != null) {
                         if (args.length == 0) {
-                            vc.getManager().setUserLimit(0);
+                            vc.getManager().setUserLimit(0).queue();
                             defaultChannel.sendMessage("Reset user limit.").queue();
                         } else if (args.length == 1) {
-                            defaultChannel.sendMessage("Incorrect usage of `" + command + "`.");
-                        } else {
                             int maxUsers = 0;
                             try {
                                 maxUsers = Integer.parseInt(args[0]);
@@ -83,6 +82,8 @@ public class CommandListener extends ListenerAdapter {
                             } else {
                                 defaultChannel.sendMessage("Number of users must be a positive integer.").queue();
                             }
+                        } else {
+                            defaultChannel.sendMessage("Incorrect usage of `" + command + "`.");
                         }
                     } else {
                         defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();

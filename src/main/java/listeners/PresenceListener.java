@@ -21,6 +21,7 @@ public class PresenceListener extends ListenerAdapter {
         Member member = event.getMember();
 
         // get vc member is in
+        if (member.getVoiceState() == null) return;
         VoiceChannel channel = member.getVoiceState().getChannel();
 
         // update vc name information

@@ -272,40 +272,47 @@ public class VoiceChannelManager {
         List<Member> members = voiceChannel.getMembers();
         // get list of activities for each member and the number of members playing the activity
         // create hashmap of activities and popularity, prioritizing default activities
-        HashMap<Activity, Integer> activityMap = new HashMap<>();
+        HashMap<String, Integer> activityMap = new HashMap<>();
         for (Member member : members) {
             List<Activity> memberActivities = member.getActivities();
             for (Activity activity : memberActivities) {
                 // if activity is default, set isPlaying to true and update hashmap accordingly.
-                if (activity.getType().equals(Activity.ActivityType.DEFAULT)) {
-                    isPlaying = true;
-                    if (activityMap.containsKey(activity)) { // if we've seen this activity before, update value
-                        int value = activityMap.get(activity);
-                        activityMap.replace(activity, ++value);
-                    } else { // otherwise add it
-                        activityMap.put(activity, 1);
-                    }
+                switch (activity.getType()) {
+                    case DEFAULT:
+                        if (!isPlaying) primaryActivity = activity;
+                        isPlaying = true;
+                        System.out.println(activityMap.containsKey(activity.getName()));
+                        if (activityMap.containsKey(activity.getName())) { // if we've seen this activity before, update value
+                            int defaultValue = activityMap.get(activity.getName());
+                            activityMap.replace(activity.getName(), ++defaultValue);
+                        } else { // otherwise add it
+                            activityMap.put(activity.getName(), 1);
+                        }
 
-                    int value = activityMap.get(activity);
-                    if (value > maxPlayers) {
-                        maxPlayers = value;
-                        primaryActivity = activity;
-                    }
-                }
-                // if activity is listening and there is no default activity in map, update hashmap accordingly
-                if (activity.getType().equals(Activity.ActivityType.LISTENING) && !isPlaying) {
-                    if (activityMap.containsKey(activity)) { // if we've seen this activity before, update value
-                        int value = activityMap.get(activity);
-                        activityMap.replace(activity, ++value);
-                    } else { // otherwise add it
-                        activityMap.put(activity, 1);
-                    }
+                        int defaultValue = activityMap.get(activity.getName());
+                        if (defaultValue > maxPlayers) {
+                            maxPlayers = defaultValue;
+                            primaryActivity = activity;
+                        }
+                        break;
 
-                    int value = activityMap.get(activity);
-                    if (value > maxPlayers) {
-                        maxPlayers = value;
-                        primaryActivity = activity;
-                    }
+                        // if activity is listening and there is no default activity in map, update hashmap accordingly
+                    case LISTENING:
+                        if (!isPlaying) {
+                            if (activityMap.containsKey(activity.getName())) { // if we've seen this activity before, update value
+                                int listeningValue = activityMap.get(activity.getName());
+                                activityMap.replace(activity.getName(), ++listeningValue);
+                            } else { // otherwise add it
+                                activityMap.put(activity.getName(), 1);
+                            }
+
+                            int listeningValue = activityMap.get(activity.getName());
+                            if (listeningValue > maxPlayers) {
+                                maxPlayers = listeningValue;
+                                primaryActivity = activity;
+                            }
+                        }
+                        break;
                 }
             }
         }

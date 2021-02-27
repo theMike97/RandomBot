@@ -8,10 +8,17 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class CommandListener extends ListenerAdapter {
 
+    // command static variables
     private static final String COMMAND_FLAG = "!";
+    private static final String HELP_COMMAND = "help";
+    private static final String QUOTE_COMMAND = "quote";
+    private static final String MAXUSERS_COMMAND = "maxusers";
+    private static final String TITLE_COMMAND = "title";
+
     private static final String MUST_BE_IN_VC_MESSAGE = "Must be in a voice channel to use this command.";
     private static final String MUST_BE_IN_ON_DEMAND_CHANNEL = "Must be in a created on-demand voice channel to change the name.";
 
@@ -40,13 +47,63 @@ public class CommandListener extends ListenerAdapter {
             String[] args = Arrays.copyOfRange(messageArray, 1, messageArray.length); //O(n)
 
             switch (command) {
-                case COMMAND_FLAG + "help":
-                    user.openPrivateChannel().queue((channel) -> {
-                        channel.sendMessage("You've requested help!").queue();
-                    });
+                case COMMAND_FLAG + HELP_COMMAND:
+                    // if no args present, dm member complete commands list/description
+                    // if args present, dm member description for specified command
+                    if (args.length == 0) {
+                        embedBuilder.clear();
+                        embedBuilder.setTitle("RandomBot List of Commands");
+                        embedBuilder.addField(QUOTE_COMMAND, "", false);
+                        embedBuilder.addField(MAXUSERS_COMMAND, "", false);
+                        embedBuilder.addField(TITLE_COMMAND, "", false);
+                        defaultChannel.sendMessage(embedBuilder.build()).queue();
+//                        });
+                    } else if (args.length == 1) {
+                        switch (args[0]) {
+                            case HELP_COMMAND:
+                                defaultChannel.sendMessage("You've requested help for the " + HELP_COMMAND).queue();
+                                break;
+                            case QUOTE_COMMAND:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + QUOTE_COMMAND + "\" Command");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + " [quote] ?[author]", "Add a quote by an author to the server.  If author is absent, RandomBot will use \"Anonymous\" instead.", false);
+                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + "", "Get a random quote from the server and display it as a message.", false);
+                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                break;
+                            case MAXUSERS_COMMAND:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + MAXUSERS_COMMAND + "\" Command");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField(COMMAND_FLAG + MAXUSERS_COMMAND + " [number]", "Set user limit on a custom on-demand voice channel.", false);
+                                embedBuilder.addField(COMMAND_FLAG + MAXUSERS_COMMAND + "", "Reset voice channel user limit on a custom on-demand voice channel to unlimited.", false);
+                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                break;
+                            case TITLE_COMMAND:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + TITLE_COMMAND + "\" Command");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField(COMMAND_FLAG + TITLE_COMMAND + " [new custom title]", "Set a custom title for a custom on-demand voice channel.", false);
+                                embedBuilder.addField(COMMAND_FLAG + TITLE_COMMAND + "", "Reset voice channel title to the title determined by RandomBot.", false);
+                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                break;
+                            default:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot Command Help");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField( COMMAND_FLAG + command + " is not a valid command", "perhaps you meant:", false);
+                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                break;
+                        }
+                    } else {
+                        embedBuilder.clear();
+                        embedBuilder.setTitle("RandomBot Command Help");
+                        embedBuilder.setDescription("Requested by " + user.getAsMention());
+                        embedBuilder.addField("!command is not a valid command", "perhaps you meant:", false);
+                    }
                     break;
 
-                case COMMAND_FLAG + "quote":
+                case COMMAND_FLAG + QUOTE_COMMAND:
                     if (args.length == 0) { // no args
                         String quote = qm.getRandomQuote(event.getGuild());
                         defaultChannel.sendMessage(quote).queue();
@@ -55,13 +112,17 @@ public class CommandListener extends ListenerAdapter {
                         for (String word : args) {
                             quote += word + " ";
                         }
-                        quote = quote.substring(0, quote.length()-1);
+                        quote = quote.substring(0, quote.length() - 1);
                         qm.addQuote(event.getGuild(), quote);
-                        defaultChannel.sendMessage("Quote added!").queue();
+                        // build embedmessage and send
+                        embedBuilder.clear();
+                        embedBuilder.setTitle("Quote Added");
+                        embedBuilder.addField(quote, "- " + "Anonymous", false);
+                        defaultChannel.sendMessage(embedBuilder.build()).queue();
                     }
                     break;
 
-                case COMMAND_FLAG + "maxusers":
+                case COMMAND_FLAG + MAXUSERS_COMMAND:
                     if (vc != null) {
                         if (args.length == 0) {
                             vc.getManager().setUserLimit(0).queue();
@@ -91,7 +152,7 @@ public class CommandListener extends ListenerAdapter {
                     }
                     break;
 
-                case COMMAND_FLAG + "title":
+                case COMMAND_FLAG + TITLE_COMMAND:
                     if (vc != null) {
                         if (vcm.isCreatedVoiceChannel(vc)) {
                             if (args.length == 0) {

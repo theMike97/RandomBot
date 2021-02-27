@@ -13,6 +13,7 @@ public class CommandListener extends ListenerAdapter {
 
     private static final String COMMAND_FLAG = "!";
     private static final String MUST_BE_IN_VC_MESSAGE = "Must be in a voice channel to use this command.";
+    private static final String MUST_BE_IN_ON_DEMAND_CHANNEL = "Must be in a created on-demand voice channel to change the name.";
 
     private QuotesManager qm;
     private VoiceChannelManager vcm;
@@ -92,19 +93,26 @@ public class CommandListener extends ListenerAdapter {
 
                 case COMMAND_FLAG + "title":
                     if (vc != null) {
-                        if (args.length == 0) {
-                            // reset naming to standard naming convention
-                            vcm.setStandardChannelName(vc);
+                        if (vcm.isCreatedVoiceChannel(vc)) {
+                            if (args.length == 0) {
+                                // reset naming to standard naming convention
+                                vcm.setStandardChannelName(vc);
+                                defaultChannel.sendMessage("Restored title.").queue();
+                            } else {
+                                // set custom title
+                                String customTitle = "";
+                                for (String word : args) customTitle += word + " ";
+                                customTitle = customTitle.substring(0, customTitle.length() - 1);
+                                vcm.setCustomChannelName(vc, customTitle);
+                                defaultChannel.sendMessage("Changed title to " + customTitle).queue();
+                            }
                         } else {
-                            // set custom title
-                            String customTitle = "";
-                            for (String word : args) customTitle += word + " ";
-                            customTitle = customTitle.substring(0, customTitle.length()-1);
-                            vcm.setCustomChannelName(vc, customTitle);
+                            defaultChannel.sendMessage(MUST_BE_IN_ON_DEMAND_CHANNEL).queue();
                         }
                     } else {
                         defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();
                     }
+                    break;
             }
         }
     }

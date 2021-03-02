@@ -28,12 +28,12 @@ public class ReactionListener extends ListenerAdapter {
         }
 
         rm.syncReactionMessageTable(guild); // will sync if messageId variable is null
-        if (rm.getRoleAssignmentMessageId(guild) != null) {
+        if (rm.getRoleAssignmentMessageId() != null) {
 
-            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(guild))) {
+            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId())) {
 
                 rm.syncRoleReactionEmotesTable(guild); // will sync if roleEmotes is null
-                if (rm.isInEmoteList(guild, reactionEmoteString)) {
+                if (rm.isInEmoteList(reactionEmoteString)) {
 
                     rm.addToRoleFromEmote(reactionEmoteString, member);
                 }
@@ -54,13 +54,14 @@ public class ReactionListener extends ListenerAdapter {
         }
 
         rm.syncReactionMessageTable(event.getGuild()); // will sync if messageId variable is null
-        if (rm.getRoleAssignmentMessageId(event.getGuild()) != null) {
+        if (rm.getRoleAssignmentMessageId() != null) {
 
-            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(event.getGuild()))) {
+            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId())) {
 
                 rm.syncRoleReactionEmotesTable(event.getGuild()); // will sync if roleEmotes is null
-                if (rm.isInEmoteList(event.getGuild(), reactionEmoteString)) {
+                if (rm.isInEmoteList(reactionEmoteString)) {
 
+                    assert member != null;
                     rm.removeFromRoleFromEmote(reactionEmoteString, member);
                 }
             }

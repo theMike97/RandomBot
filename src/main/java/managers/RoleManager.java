@@ -55,10 +55,9 @@ public class RoleManager {
     /**
      * Gets message Id for the reaction message for the specified guild.
      *
-     * @param guild The guild whose message Id should be returned
-     * @return      Reaction message Id
+     * @return  Reaction message Id
      */
-    public String getRoleAssignmentMessageId(Guild guild) {
+    public String getRoleAssignmentMessageId() {
         return roleAssignmentMessageId;
     }
 
@@ -96,7 +95,7 @@ public class RoleManager {
      */
     public void removeRoleEmoteLink(Role role, String emoteString) {
         Guild guild = role.getGuild();
-        roleEmotes.remove(emoteString);
+        roleEmotes.remove(emoteString, role);
 
         Table reactionEmotesTable = dynamoDB.getTable("RoleReactionEmotes");
         try {
@@ -110,11 +109,10 @@ public class RoleManager {
 
     /**
      *
-     * @param guild
      * @param emoteString
      * @return
      */
-    public boolean isInEmoteList(Guild guild, String emoteString) {
+    public boolean isInEmoteList(String emoteString) {
         return roleEmotes.containsKey(emoteString);
     }
 

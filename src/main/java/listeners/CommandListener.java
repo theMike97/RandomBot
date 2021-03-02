@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CommandListener extends ListenerAdapter {
@@ -41,7 +42,7 @@ public class CommandListener extends ListenerAdapter {
     private static final String MUST_BE_IN_ON_DEMAND_CHANNEL = "Must be in a created on-demand voice channel to change the name.";
     private static final String INVALID_ID_MESSAGE = "That is an invalid ID.  To get a valid ID, right click on the " +
             "desired entity and click \"Copy ID\" from the menu.";
-    private static final String INVALID_EMOTE_MESSAGE = "That is an invalid emote.  Make sure you typed it correctly or didnt choose " +
+    private static final String INVALID_EMOTE_MESSAGE = "That is an invalid emote.  Make sure you typed it correctly or didn't choose " +
             "an emote from a different server.";
     private static final String INVALID_PERMS_MESSAGE = "You do not have permission to use this command!  Ask the server owner to " +
             "help you out.";
@@ -66,10 +67,9 @@ public class CommandListener extends ListenerAdapter {
         if (message.getChannelType().isGuild() && !user.isBot()) {
             Guild guild = event.getGuild();
             Member member = event.getMember();
-            VoiceChannel vc = null;
-            if (member != null) {
-                vc = (member.getVoiceState() == null) ? null : member.getVoiceState().getChannel();
-            }
+            if (member == null || guild == null) return;
+
+            VoiceChannel vc = (member.getVoiceState() == null) ? null : member.getVoiceState().getChannel();
             TextChannel defaultChannel = event.getTextChannel();
 
             String[] messageArray = message.getContentRaw().split("\\s+");
@@ -84,7 +84,7 @@ public class CommandListener extends ListenerAdapter {
                         defaultChannel.sendMessage(INVALID_PERMS_MESSAGE).queue();
                         return;
                     }
-                    System.out.println(rm.getRoleAssignmentMessageId(event.getGuild()));
+                    System.out.println(extractRoleId(args[0]));
                     break;
 
                 case COMMAND_FLAG + ROLE_REACTION_ID_COMMAND:
@@ -104,7 +104,7 @@ public class CommandListener extends ListenerAdapter {
 
                     rm.syncReactionMessageTable(guild);
                     rm.setRoleAssignmentMessage(guild, args[0]);
-                    System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId(guild));
+                    System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId());
                     break;
 
                 case COMMAND_FLAG + ADD_ROLE_EMOTE_LINK:
@@ -121,14 +121,14 @@ public class CommandListener extends ListenerAdapter {
                         defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
                         return;
                     }
-                    // we didn't use an id
-                    if (Pattern.compile("^[0-9]]").matcher(args[1]).find()) {
+                    // we didn't use '@role' syntax
+                    if (Pattern.compile("^<@&[0-9]+>$").matcher(args[1]).find()) {
                         defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
                         return;
                     }
 
                     rm.syncRoleReactionEmotesTable(guild);
-                    rm.addRoleEmoteLink(Objects.requireNonNull(guild.getRoleById(args[1])), extractEmoteId(args[0]));
+                    rm.addRoleEmoteLink(guild.getRoleById(extractRoleId(args[1])), extractEmoteId(args[0]));
                     System.out.println("Added (emote, role) (" + args[0] + ", " + args[1] + ")");
                     break;
 
@@ -147,13 +147,13 @@ public class CommandListener extends ListenerAdapter {
                         return;
                     }
                     // we didn't use an id
-                    if (Pattern.compile("^[0-9]]").matcher(args[1]).find()) {
+                    if (Pattern.compile("^[0-9]").matcher(args[1]).find()) {
                         defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
                         return;
                     }
 
                     rm.syncRoleReactionEmotesTable(guild);
-                    rm.removeRoleEmoteLink(Objects.requireNonNull(guild.getRoleById(args[1])), extractEmoteId(args[0]));
+                    rm.removeRoleEmoteLink(guild.getRoleById(extractRoleId(args[1])), extractEmoteId(args[0]));
                     System.out.println("Removed (emote, role) (" + args[0] + ", " + args[1] + ")");
                     break;
 
@@ -187,7 +187,7 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + QUOTE_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + ROLE_REACTION_ID_COMMAND + "[message id]",
+                                embedBuilder.addField(COMMAND_FLAG + ROLE_REACTION_ID_COMMAND + " [message id]",
                                         "Tell RandomBot which message it should listen to for role reactions.",
                                         false);
                                 break;
@@ -196,8 +196,19 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + "[:reaction:] [role id]",
+                                embedBuilder.addField(COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + " [:emote:] [role id]",
                                         "Link a reaction emote/emoji to a role.",
+                                        false);
+                                break;
+
+                            case REMOVE_ROLE_EMOTE_LINK:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK + "\" Command");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField(COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK + " [:emote:] [role id]",
+                                        "Remove link between an emote and its associated role.  Upon successful completion," +
+                                                "reacting to the react message with [:emote:] will no longer assign you" +
+                                                "to a role.",
                                         false);
                                 break;
                                 // everyone commands
@@ -205,7 +216,7 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + HELP_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + HELP_COMMAND + "?[command]",
+                                embedBuilder.addField(COMMAND_FLAG + HELP_COMMAND + " ?[command]",
                                         "If [command] is present, RandomBot will send a message detailing the usage" +
                                                 "and applications of [command].  Otherwise, RandomBot will send a message" +
                                                 "enumerating all commands available to the user.",
@@ -249,7 +260,7 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot Command Help");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + command + " is not a valid command",
+                                embedBuilder.addField(command + " is not a valid command",
                                         "perhaps you meant:",
                                         false);
                                 break;
@@ -381,17 +392,15 @@ public class CommandListener extends ListenerAdapter {
         }
     }
 
-    private String extractEmoteId(String rawEmoteString) {
-        // remove <> symbols
-        rawEmoteString = rawEmoteString.replaceAll("[<>]", "");
-        StringBuilder sb = new StringBuilder();
-        // iterate backwards until we hit the first ':'
-        for (int i = rawEmoteString.length() - 1; i >= 0; i--) {
-            if (rawEmoteString.charAt(i) == ':') break;
-            sb.append(rawEmoteString.charAt(i));
-        }
-        sb.reverse();
+    private String extractRoleId(String rawRoleString) {
+        Matcher matcher = Pattern.compile("^<@&([0-9]+)>$").matcher(rawRoleString);
+        matcher.find();
+        return matcher.group(1);
+    }
 
-        return sb.toString();
+    private String extractEmoteId(String rawEmoteString) {
+        Matcher matcher = Pattern.compile("^<:[a-zA-Z0-9_]+:([0-9]+)>$").matcher(rawEmoteString);
+        matcher.find();
+        return matcher.group(1);
     }
 }

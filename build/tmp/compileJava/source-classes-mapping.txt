@@ -3,14 +3,14 @@ managers/RoleManager.java
  managers.RoleManager$1
 listeners/ReactionListener.java
  listeners.ReactionListener
-listeners/PresenceListener.java
- listeners.PresenceListener
-listeners/VoiceChannelListener.java
- listeners.VoiceChannelListener
+Main.java
+ Main
+listeners/CommandListener.java
+ listeners.CommandListener
 minigames/rlmafia/Player.java
  minigames.rlmafia.Player
-logger/ErrorLogger.java
- logger.ErrorLogger
+managers/QuotesManager.java
+ managers.QuotesManager
 managers/VoiceChannelManager.java
  managers.VoiceChannelManager
  managers.VoiceChannelManager$1
@@ -18,9 +18,9 @@ Secrets.java
  Secrets
 minigames/rlmafia/MafiaGame.java
  minigames.rlmafia.MafiaGame
-managers/QuotesManager.java
- managers.QuotesManager
-listeners/CommandListener.java
- listeners.CommandListener
-Main.java
- Main
+logger/ErrorLogger.java
+ logger.ErrorLogger
+listeners/VoiceChannelListener.java
+ listeners.VoiceChannelListener
+listeners/PresenceListener.java
+ listeners.PresenceListener

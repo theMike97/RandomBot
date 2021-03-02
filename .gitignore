@@ -1,5 +1,6 @@
 **/Secrets.java
-**/Secrets.class
+*.class
+build/
 .gradle/
 .idea/*
 *.log

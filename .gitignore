@@ -1,7 +1,5 @@
 **/Secrets.java
-build/
 .gradle/
 .idea/*
-*.class
 *.log
 **/bin

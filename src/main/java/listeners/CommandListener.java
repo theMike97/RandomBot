@@ -36,6 +36,7 @@ public class CommandListener extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         Message message = event.getMessage();
         User user = event.getAuthor();
+        qm.setGuild(event.getGuild());
 
         if (message.getChannelType().isGuild() && !user.isBot()) {
             Member member = event.getMember();
@@ -67,7 +68,7 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + QUOTE_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + " [quote] ?[author]", "Add a quote by an author to the server.  If author is absent, RandomBot will use \"Anonymous\" instead.", false);
+                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + " \"[quote]\" ?[author]", "Add a quote by an author to the server.  If author is absent, RandomBot will use \"Anonymous\" instead.", false);
                                 embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + "", "Get a random quote from the server and display it as a message.", false);
                                 defaultChannel.sendMessage(embedBuilder.build()).queue();
                                 break;
@@ -91,7 +92,7 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot Command Help");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField( COMMAND_FLAG + command + " is not a valid command", "perhaps you meant:", false);
+                                embedBuilder.addField(COMMAND_FLAG + command + " is not a valid command", "perhaps you meant:", false);
                                 defaultChannel.sendMessage(embedBuilder.build()).queue();
                                 break;
                         }
@@ -104,22 +105,63 @@ public class CommandListener extends ListenerAdapter {
                     break;
 
                 case COMMAND_FLAG + QUOTE_COMMAND:
+                    embedBuilder.clear();
                     if (args.length == 0) { // no args
-                        String quote = qm.getRandomQuote(event.getGuild());
-                        defaultChannel.sendMessage(quote).queue();
+                        String[] quoteData = qm.getRandomQuote();
+                        embedBuilder.addField(quoteData[0], "-" + quoteData[1], false);
                     } else {
-                        String quote = "";
-                        for (String word : args) {
-                            quote += word + " ";
+                        // quote should be in ""
+                        // followed by the author
+                        if (!args[0].startsWith("\"")) {
+                            defaultChannel.sendMessage("Quote not formatted correctly! (1)").queue();
+                            return;
                         }
-                        quote = quote.substring(0, quote.length() - 1);
-                        qm.addQuote(event.getGuild(), quote);
+                        String quoteData[] = new String[2];
+
+                        // get quote
+                        String quoteText = "";
+                        boolean endQuoteMark = false;
+                        int index = 0;
+                        for (; index < args.length; index++) {
+                            quoteText += args[index] + " ";
+                            if (args[index].endsWith("\"")) {
+                                endQuoteMark = true;
+                                index++;
+                                break;
+                            }
+                        }
+                        if (!endQuoteMark) {
+                            defaultChannel.sendMessage("Quote not formatted correctly! (2)").queue();
+                            return;
+                        }
+                        quoteText = quoteText.substring(1, quoteText.length() - 2);
+                        quoteText = quoteText.replaceAll("\\s+(?=\\s)", "");
+                        quoteData[0] = quoteText;
+
+                        // everything after is author.  if nothing after, say anonymous
+                        String author = "";
+                        for (; index < args.length; index++) {
+                            author += args[index] + " ";
+                        }
+
+                        author = author.replaceAll("^\\s+|\\s+$|\\s+(?=\\s)", "");
+                        if (author.startsWith("-")) author = author.replaceFirst("-", "");
+                        if (author.equals("")) author = "Anonymous";
+                        quoteData[1] = author;
+
+                        try {
+                            qm.addQuote(quoteData);
+                        } catch (Exception e) {
+                            System.out.println("Could not add quote.");
+                            defaultChannel.sendMessage("Quote add failed.").queue();
+                            return;
+                        }
                         // build embedmessage and send
-                        embedBuilder.clear();
                         embedBuilder.setTitle("Quote Added");
-                        embedBuilder.addField(quote, "- " + "Anonymous", false);
-                        defaultChannel.sendMessage(embedBuilder.build()).queue();
+                        embedBuilder.addField("\"" + quoteData[0] + "\"", "-" + quoteData[1], false);
+                        System.out.println("Quote added.");
                     }
+                    defaultChannel.sendMessage(embedBuilder.build()).queue();
                     break;
 
                 case COMMAND_FLAG + MAXUSERS_COMMAND:

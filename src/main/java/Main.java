@@ -15,6 +15,18 @@ import javax.security.auth.login.LoginException;
 
 public class Main {
 
+    /*
+    permissions needed: (1358974032)
+    move members
+    view channels
+    manage roles
+    manage channels
+    send messages
+    embed links
+    add reactions
+    manage emojis
+     */
+
     public static void main(String[] args) throws LoginException {
         JDABuilder jda = JDABuilder.createDefault(Secrets.TOKEN);
         jda.setActivity(Activity.playing("Type !help for commands"));

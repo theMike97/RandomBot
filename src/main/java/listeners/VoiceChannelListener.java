@@ -35,10 +35,7 @@ public class VoiceChannelListener extends ListenerAdapter {
 
     @Override
     public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
-        Member member = event.getMember();
         VoiceChannel leftVoiceChannel = event.getChannelLeft();
-
-//        System.out.println(member.getUser().getName() + " left " + leftVoiceChannel.getName());
 
         // if the left vc is a created on demand channel
         if (vcm.isCreatedVoiceChannel(leftVoiceChannel)) {

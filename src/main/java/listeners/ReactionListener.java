@@ -8,8 +8,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class ReactionListener extends ListenerAdapter {
 
-    private RoleManager rm;
-    private final String ROLE_ASSIGN_MESSAGE_ID = "813509499578613780";
+    private final RoleManager rm;
 
     public ReactionListener(RoleManager roleManager) {
         rm = roleManager;
@@ -22,14 +21,16 @@ public class ReactionListener extends ListenerAdapter {
         String reactionEmoteString;
 
         if (event.getReactionEmote().isEmote()) {
-            reactionEmoteString = event.getReactionEmote().getEmote().getName();
+            reactionEmoteString = event.getReactionEmote().getEmote().getId();
         } else {
             reactionEmoteString = event.getReactionEmote().getAsCodepoints();
         }
 
-        if (reactedMessage.getId().equals(ROLE_ASSIGN_MESSAGE_ID)) {
-            if (rm.isInEmoteList(reactionEmoteString)) {
-                rm.addToRoleFromEmote(reactionEmoteString, event.getGuild(), member);
+        if (rm.getRoleAssignmentMessageId(event.getGuild()) != null) {
+            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(event.getGuild()))) {
+                if (rm.isInEmoteList(event.getGuild(), reactionEmoteString)) {
+                    rm.addToRoleFromEmote(reactionEmoteString, member);
+                }
             }
         }
     }
@@ -41,14 +42,14 @@ public class ReactionListener extends ListenerAdapter {
         String reactionEmoteString;
 
         if (event.getReactionEmote().isEmote()) {
-            reactionEmoteString = event.getReactionEmote().getEmote().getName();
+            reactionEmoteString = event.getReactionEmote().getEmote().getId();
         } else {
             reactionEmoteString = event.getReactionEmote().getAsCodepoints();
         }
 
-        if (reactedMessage.getId().equals(ROLE_ASSIGN_MESSAGE_ID)) {
-            if (rm.isInEmoteList(reactionEmoteString)) {
-                rm.removeFromRoleFromEmote(reactionEmoteString, event.getGuild(), member);
+        if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(event.getGuild()))) {
+            if (rm.isInEmoteList(event.getGuild(), reactionEmoteString)) {
+                rm.removeFromRoleFromEmote(reactionEmoteString, member);
             }
         }
 

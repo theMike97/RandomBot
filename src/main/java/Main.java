@@ -1,8 +1,9 @@
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import listeners.CommandListener;
 import listeners.PresenceListener;
 import listeners.ReactionListener;
 import listeners.VoiceChannelListener;
-import logger.ErrorLogger;
 import managers.QuotesManager;
 import managers.RoleManager;
 import managers.VoiceChannelManager;
@@ -28,24 +29,32 @@ public class Main {
      */
 
     public static void main(String[] args) throws LoginException {
-        JDABuilder jda = JDABuilder.createDefault(Secrets.TOKEN);
-        jda.setActivity(Activity.playing("Type !help for commands"));
+        JDABuilder jdaBuilder = JDABuilder.createDefault(Secrets.TOKEN);
+        jdaBuilder.setActivity(Activity.playing("Type !help for commands"));
+
+        ProfileCredentialsProvider provider = new ProfileCredentialsProvider();
+        try {
+            provider.getCredentials();
+        } catch (Exception e) {
+            jdaBuilder.setActivity(Activity.playing("Not connected to DB"));
+            throw new AmazonClientException("Could not fetch credentials.");
+        }
 
         VoiceChannelManager voiceChannelManager = new VoiceChannelManager();
-        RoleManager roleManager = new RoleManager();
-        QuotesManager quotesManager = new QuotesManager();
+        RoleManager roleManager = new RoleManager(provider);
+        QuotesManager quotesManager = new QuotesManager(provider);
 
-        jda.enableIntents(GatewayIntent.GUILD_MESSAGES);
-        jda.enableIntents(GatewayIntent.GUILD_PRESENCES);
-        jda.enableCache(CacheFlag.ACTIVITY);
-        jda.enableCache(CacheFlag.VOICE_STATE);
+        jdaBuilder.enableIntents(GatewayIntent.GUILD_MESSAGES);
+        jdaBuilder.enableIntents(GatewayIntent.GUILD_PRESENCES);
+        jdaBuilder.enableCache(CacheFlag.ACTIVITY);
+        jdaBuilder.enableCache(CacheFlag.VOICE_STATE);
 
-        jda.addEventListeners(new CommandListener(quotesManager, voiceChannelManager));
-        jda.addEventListeners(new ReactionListener(roleManager));
-        jda.addEventListeners(new VoiceChannelListener(voiceChannelManager));
-        jda.addEventListeners(new PresenceListener(voiceChannelManager));
+        jdaBuilder.addEventListeners(new CommandListener(quotesManager, voiceChannelManager, roleManager));
+        jdaBuilder.addEventListeners(new ReactionListener(roleManager));
+        jdaBuilder.addEventListeners(new VoiceChannelListener(voiceChannelManager));
+        jdaBuilder.addEventListeners(new PresenceListener(voiceChannelManager));
 
-        jda.build();
+        jdaBuilder.build();
+
     }
-
 }

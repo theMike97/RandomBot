@@ -1,6 +1,5 @@
 package managers;
 
-import logger.ErrorLogger;
 import net.dv8tion.jda.api.entities.*;
 
 import java.util.ArrayList;
@@ -337,7 +336,7 @@ public class VoiceChannelManager {
 
     public void setVoiceChannelName(VoiceChannel vc) {
         Activity primaryActivity = getPrimaryVoiceChannelActivity(vc);
-        String gameActivity = null;
+        String gameActivity;
         if (customTitleMap.get(vc.getId()) == STANDARD_TITLE) {
             gameActivity = (primaryActivity == null) ? null : primaryActivity.getName();
         } else {

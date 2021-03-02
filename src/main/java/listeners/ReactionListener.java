@@ -18,6 +18,7 @@ public class ReactionListener extends ListenerAdapter {
     public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
         Message reactedMessage = event.retrieveMessage().complete();
         Member member = event.getMember();
+        Guild guild = event.getGuild();
         String reactionEmoteString;
 
         if (event.getReactionEmote().isEmote()) {
@@ -26,9 +27,14 @@ public class ReactionListener extends ListenerAdapter {
             reactionEmoteString = event.getReactionEmote().getAsCodepoints();
         }
 
-        if (rm.getRoleAssignmentMessageId(event.getGuild()) != null) {
-            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(event.getGuild()))) {
-                if (rm.isInEmoteList(event.getGuild(), reactionEmoteString)) {
+        rm.syncReactionMessageTable(guild); // will sync if messageId variable is null
+        if (rm.getRoleAssignmentMessageId(guild) != null) {
+
+            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(guild))) {
+
+                rm.syncRoleReactionEmotesTable(guild); // will sync if roleEmotes is null
+                if (rm.isInEmoteList(guild, reactionEmoteString)) {
+
                     rm.addToRoleFromEmote(reactionEmoteString, member);
                 }
             }
@@ -47,12 +53,18 @@ public class ReactionListener extends ListenerAdapter {
             reactionEmoteString = event.getReactionEmote().getAsCodepoints();
         }
 
-        if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(event.getGuild()))) {
-            if (rm.isInEmoteList(event.getGuild(), reactionEmoteString)) {
-                rm.removeFromRoleFromEmote(reactionEmoteString, member);
+        rm.syncReactionMessageTable(event.getGuild()); // will sync if messageId variable is null
+        if (rm.getRoleAssignmentMessageId(event.getGuild()) != null) {
+
+            if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId(event.getGuild()))) {
+
+                rm.syncRoleReactionEmotesTable(event.getGuild()); // will sync if roleEmotes is null
+                if (rm.isInEmoteList(event.getGuild(), reactionEmoteString)) {
+
+                    rm.removeFromRoleFromEmote(reactionEmoteString, member);
+                }
             }
         }
-
     }
 
 }

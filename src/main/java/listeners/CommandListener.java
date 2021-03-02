@@ -14,8 +14,9 @@ import java.util.regex.Pattern;
 
 public class CommandListener extends ListenerAdapter {
 
-    // command static variables
+    // static command variables
     private static final String COMMAND_FLAG = "!";
+
     private static final String HELP_COMMAND = "help";
     private static final String QUOTE_COMMAND = "quote";
     private static final String MAX_USERS_COMMAND = "max-users";
@@ -23,11 +24,27 @@ public class CommandListener extends ListenerAdapter {
     private static final String ROLE_REACTION_ID_COMMAND = "role-reaction-id";
     private static final String ADD_ROLE_EMOTE_LINK = "add-role-emote-link";
     private static final String REMOVE_ROLE_EMOTE_LINK = "remove-role-emote-link";
+    private static final String[] ADMIN_COMMANDS_LIST = new String[] {
+            ADD_ROLE_EMOTE_LINK,
+            REMOVE_ROLE_EMOTE_LINK,
+            ROLE_REACTION_ID_COMMAND
+    };
+    private static final String[] EVERYONE_COMMANDS_LIST = new String[] {
+            HELP_COMMAND,
+            MAX_USERS_COMMAND,
+            QUOTE_COMMAND,
+            TITLE_COMMAND
+    };
 
+    // static error message variables
     private static final String MUST_BE_IN_VC_MESSAGE = "Must be in a voice channel to use this command.";
     private static final String MUST_BE_IN_ON_DEMAND_CHANNEL = "Must be in a created on-demand voice channel to change the name.";
-    private static final String INVALID_ID_MESSAGE = "That is an invalid ID.  To get a valid message ID, right click on the" +
-            "desired message and click \"Copy ID\" from the menu.";
+    private static final String INVALID_ID_MESSAGE = "That is an invalid ID.  To get a valid ID, right click on the " +
+            "desired entity and click \"Copy ID\" from the menu.";
+    private static final String INVALID_EMOTE_MESSAGE = "That is an invalid emote.  Make sure you typed it correctly or didnt choose " +
+            "an emote from a different server.";
+    private static final String INVALID_PERMS_MESSAGE = "You do not have permission to use this command!  Ask the server owner to " +
+            "help you out.";
 
     private final QuotesManager qm;
     private final VoiceChannelManager vcm;
@@ -63,10 +80,18 @@ public class CommandListener extends ListenerAdapter {
 
                 // admin commands first
                 case "!test":
+                    if (!member.isOwner()) {
+                        defaultChannel.sendMessage(INVALID_PERMS_MESSAGE).queue();
+                        return;
+                    }
                     System.out.println(rm.getRoleAssignmentMessageId(event.getGuild()));
                     break;
 
                 case COMMAND_FLAG + ROLE_REACTION_ID_COMMAND:
+                    if (!member.isOwner()) {
+                        defaultChannel.sendMessage(INVALID_PERMS_MESSAGE).queue();
+                        return;
+                    }
                     if (args.length != 1) {
                         defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
                         return;
@@ -76,18 +101,24 @@ public class CommandListener extends ListenerAdapter {
                         defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
                         return;
                     }
+
+                    rm.syncReactionMessageTable(guild);
                     rm.setRoleAssignmentMessage(guild, args[0]);
                     System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId(guild));
                     break;
 
                 case COMMAND_FLAG + ADD_ROLE_EMOTE_LINK:
+                    if (!member.isOwner()) {
+                        defaultChannel.sendMessage(INVALID_PERMS_MESSAGE).queue();
+                        return;
+                    }
                     if (args.length != 2) {
                         defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
                         return;
                     }
                     // we didn't use an emote
                     if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find()) {
-                        defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
+                        defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
                         return;
                     }
                     // we didn't use an id
@@ -96,17 +127,23 @@ public class CommandListener extends ListenerAdapter {
                         return;
                     }
 
+                    rm.syncRoleReactionEmotesTable(guild);
                     rm.addRoleEmoteLink(Objects.requireNonNull(guild.getRoleById(args[1])), extractEmoteId(args[0]));
+                    System.out.println("Added (emote, role) (" + args[0] + ", " + args[1] + ")");
                     break;
 
                 case COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK:
+                    if (!member.isOwner()) {
+                        defaultChannel.sendMessage(INVALID_PERMS_MESSAGE).queue();
+                        return;
+                    }
                     if (args.length != 2) {
                         defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
                         return;
                     }
                     // we didn't use an emote
                     if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find()) {
-                        defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
+                        defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
                         return;
                     }
                     // we didn't use an id
@@ -115,7 +152,9 @@ public class CommandListener extends ListenerAdapter {
                         return;
                     }
 
+                    rm.syncRoleReactionEmotesTable(guild);
                     rm.removeRoleEmoteLink(Objects.requireNonNull(guild.getRoleById(args[1])), extractEmoteId(args[0]));
+                    System.out.println("Removed (emote, role) (" + args[0] + ", " + args[1] + ")");
                     break;
 
                 // everyone commands
@@ -123,62 +162,107 @@ public class CommandListener extends ListenerAdapter {
                     // if no args present, dm member complete commands list/description
                     // if args present, dm member description for specified command
                     if (args.length == 0) {
+                        String adminCommands = "";
+                        String everyoneCommands = "";
+
+                        for (String adminCommand : ADMIN_COMMANDS_LIST) {
+                            adminCommands += "\u2022 " + adminCommand + "\n";
+                        }
+                        adminCommands = adminCommands.substring(0, adminCommands.length()-1);
+                        for (String everyoneCommand : EVERYONE_COMMANDS_LIST) {
+                            everyoneCommands += "\u2022 " + everyoneCommand + "\n";
+                        }
+                        everyoneCommands = everyoneCommands.substring(0, everyoneCommands.length()-1);
+
                         embedBuilder.clear();
                         embedBuilder.setTitle("RandomBot List of Commands");
-                        embedBuilder.addField(QUOTE_COMMAND, "", false);
-                        embedBuilder.addField(MAX_USERS_COMMAND, "", false);
-                        embedBuilder.addField(TITLE_COMMAND, "", false);
-                        defaultChannel.sendMessage(embedBuilder.build()).queue();
-//                        });
+                        embedBuilder.setDescription("Requested by " + user.getAsMention());
+                        embedBuilder.addField("Owner commands", adminCommands, false);
+                        embedBuilder.addField("Regular commands", everyoneCommands, false);
+
                     } else if (args.length == 1) {
                         switch (args[0]) {
+                            // admin commands
                             case ROLE_REACTION_ID_COMMAND:
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + QUOTE_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + ROLE_REACTION_ID_COMMAND + "[message id]", "Tell RandomBot which message it should listen to for role reactions.", false);
-                                defaultChannel.sendMessage(embedBuilder.build()).queue();
-                            case HELP_COMMAND:
-                                defaultChannel.sendMessage("You've requested help for the " + HELP_COMMAND).queue();
+                                embedBuilder.addField(COMMAND_FLAG + ROLE_REACTION_ID_COMMAND + "[message id]",
+                                        "Tell RandomBot which message it should listen to for role reactions.",
+                                        false);
                                 break;
+
+                            case ADD_ROLE_EMOTE_LINK:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + "\" Command");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField(COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + "[:reaction:] [role id]",
+                                        "Link a reaction emote/emoji to a role.",
+                                        false);
+                                break;
+                                // everyone commands
+                            case HELP_COMMAND:
+                                embedBuilder.clear();
+                                embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + HELP_COMMAND + "\" Command");
+                                embedBuilder.setDescription("Requested by " + user.getAsMention());
+                                embedBuilder.addField(COMMAND_FLAG + HELP_COMMAND + "?[command]",
+                                        "If [command] is present, RandomBot will send a message detailing the usage" +
+                                                "and applications of [command].  Otherwise, RandomBot will send a message" +
+                                                "enumerating all commands available to the user.",
+                                        false);
+                                break;
+
                             case QUOTE_COMMAND:
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + QUOTE_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + " \"[quote]\" ?[author]", "Add a quote by an author to the server.  If author is absent, RandomBot will use \"Anonymous\" instead.", false);
-                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + "", "Get a random quote from the server and display it as a message.", false);
-                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + " \"[quote]\" ?[author]",
+                                        "Add a quote by an author to the server.  If author is absent, RandomBot will use \"Anonymous\" instead.",
+                                        false);
+                                embedBuilder.addField(COMMAND_FLAG + QUOTE_COMMAND + "",
+                                        "Get a random quote from the server and display it as a message.",
+                                        false);
                                 break;
                             case MAX_USERS_COMMAND:
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + MAX_USERS_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + MAX_USERS_COMMAND + " [number]", "Set user limit on a custom on-demand voice channel.", false);
-                                embedBuilder.addField(COMMAND_FLAG + MAX_USERS_COMMAND + "", "Reset voice channel user limit on a custom on-demand voice channel to unlimited.", false);
-                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                embedBuilder.addField(COMMAND_FLAG + MAX_USERS_COMMAND + " [number]",
+                                        "Set user limit on a custom on-demand voice channel.",
+                                        false);
+                                embedBuilder.addField(COMMAND_FLAG + MAX_USERS_COMMAND + "",
+                                        "Reset voice channel user limit on a custom on-demand voice channel to unlimited.",
+                                        false);
                                 break;
                             case TITLE_COMMAND:
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + TITLE_COMMAND + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + TITLE_COMMAND + " [new custom title]", "Set a custom title for a custom on-demand voice channel.", false);
-                                embedBuilder.addField(COMMAND_FLAG + TITLE_COMMAND + "", "Reset voice channel title to the title determined by RandomBot.", false);
-                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                embedBuilder.addField(COMMAND_FLAG + TITLE_COMMAND + " [new custom title]",
+                                        "Set a custom title for a custom on-demand voice channel.",
+                                        false);
+                                embedBuilder.addField(COMMAND_FLAG + TITLE_COMMAND + "",
+                                        "Reset voice channel title to the title determined by RandomBot.",
+                                        false);
                                 break;
                             default:
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot Command Help");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + command + " is not a valid command", "perhaps you meant:", false);
-                                defaultChannel.sendMessage(embedBuilder.build()).queue();
+                                embedBuilder.addField(COMMAND_FLAG + command + " is not a valid command",
+                                        "perhaps you meant:",
+                                        false);
                                 break;
                         }
                     } else {
                         embedBuilder.clear();
                         embedBuilder.setTitle("RandomBot Command Help");
                         embedBuilder.setDescription("Requested by " + user.getAsMention());
-                        embedBuilder.addField("!command is not a valid command", "perhaps you meant:", false);
+                        embedBuilder.addField("!command is not a valid command",
+                                "perhaps you meant:",
+                                false);
                     }
+                    defaultChannel.sendMessage(embedBuilder.build()).queue();
                     break;
 
                 case COMMAND_FLAG + QUOTE_COMMAND:

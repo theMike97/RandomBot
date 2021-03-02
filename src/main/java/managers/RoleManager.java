@@ -38,9 +38,11 @@ public class RoleManager {
     }
 
     /**
+     * Sets message id variable and inserts/updates the reaction message id for the guild
+     * in the database.
      *
-     * @param guild
-     * @param messageId
+     * @param guild     The guild for which the message id is set
+     * @param messageId The message id
      */
     public void setRoleAssignmentMessage(Guild guild, String messageId) {
         roleAssignmentMessageId = messageId;
@@ -51,42 +53,23 @@ public class RoleManager {
     }
 
     /**
-     * 
-     * @param guild
-     * @return
+     * Gets message Id for the reaction message for the specified guild.
+     *
+     * @param guild The guild whose message Id should be returned
+     * @return      Reaction message Id
      */
     public String getRoleAssignmentMessageId(Guild guild) {
-        // this code takes care of the event that the global message id variable is reset to null,
-        // but the database has the message id for the guild stored.
-        if (roleAssignmentMessageId == null) {
-            roleAssignmentMessageId = getRoleAssignmentMessageIdFromDB(guild);
-        }
         return roleAssignmentMessageId;
     }
 
-    private String getRoleAssignmentMessageIdFromDB(Guild guild) {
-        Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
-        Map<String, Object> valueMap = new HashMap<>();
-        valueMap.put(":guildId", guild.getId());
-
-        String messageId = null;
-        try {
-            ItemCollection<QueryOutcome> items = reactionMessageTable.query(new QuerySpec().withKeyConditionExpression("GuildID = :guildId")
-                    .withValueMap(valueMap));
-            for (Item item : items) {
-                messageId = item.getString("ReactionMessageID");
-                System.out.println("Retrieved message ID: " + messageId);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return messageId;
-    }
-
     /**
+     * Create a link between a specified role and emote/emoji.  Adds this data to a <a href="#{@link}">{@link HashMap}</a>
+     * with a key-value pair (emoteString, role) and inserts/updates a row in the database
+     * identified by the guild id and the emoteString.  The emoteString should be either
+     * the emote ID, or the emoji codepoints - whichever is applicable.
      *
-     * @param role
-     * @param emoteString
+     * @param role          The role that should be associated with the emoteString
+     * @param emoteString   A string that identifies and emote/emoji
      */
     public void addRoleEmoteLink(Role role, String emoteString) {
         Guild guild = role.getGuild();
@@ -103,9 +86,13 @@ public class RoleManager {
     }
 
     /**
+     * Remove a link between a specified role and emote/emoji.  Removes this data from a <a href="#{@link}">{@link HashMap}</a>
+     * with a key-value pair (emoteString, role) and deletes a row in the database
+     * identified by the guild id and the emoteString.  The emoteString should be either
+     * the emote ID, or the emoji codepoints - whichever is applicable.
      *
-     * @param role
-     * @param emoteString
+     * @param role          The role that should be associated with the emoteString
+     * @param emoteString   A string that identifies and emote/emoji
      */
     public void removeRoleEmoteLink(Role role, String emoteString) {
         Guild guild = role.getGuild();
@@ -128,22 +115,6 @@ public class RoleManager {
      * @return
      */
     public boolean isInEmoteList(Guild guild, String emoteString) {
-        // populate roleEmotes from db if it is empty
-        if (roleEmotes.isEmpty()) {
-            Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
-            expressionAttributeValues.put(":id", new AttributeValue().withS(guild.getId()));
-            try {
-                ScanResult result = client.scan(new ScanRequest().withTableName("RoleReactionEmotes")
-                        .withFilterExpression("GuildID = :id")
-                        .withExpressionAttributeValues(expressionAttributeValues));
-
-                for (Map<String, AttributeValue> row : result.getItems()) {
-                    roleEmotes.put(row.get("EmoteID").getS(), guild.getRoleById(row.get("RoleID").getS()));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         return roleEmotes.containsKey(emoteString);
     }
 
@@ -182,6 +153,45 @@ public class RoleManager {
                     ).queue());
         } catch (NullPointerException ex) {
             System.err.println("Emote reaction does not point to a valid role.");
+        }
+    }
+
+    // if messageId is null, pull data from table
+    public void syncReactionMessageTable(Guild guild) {
+        if (roleAssignmentMessageId == null) {
+            Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
+            Map<String, Object> valueMap = new HashMap<>();
+            valueMap.put(":guildId", guild.getId());
+
+            try {
+                ItemCollection<QueryOutcome> items = reactionMessageTable.query(new QuerySpec().withKeyConditionExpression("GuildID = :guildId")
+                        .withValueMap(valueMap));
+                for (Item item : items) {
+                    roleAssignmentMessageId = item.getString("ReactionMessageID");
+                    System.out.println("Retrieved message ID: " + roleAssignmentMessageId);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // if roleEmotes is empty, pull data from table.
+    public void syncRoleReactionEmotesTable(Guild guild) {
+        if (roleEmotes.isEmpty()) {
+            Map<String, AttributeValue> expressionAttributeValues = new HashMap<>();
+            expressionAttributeValues.put(":id", new AttributeValue().withS(guild.getId()));
+            try {
+                ScanResult result = client.scan(new ScanRequest().withTableName("RoleReactionEmotes")
+                        .withFilterExpression("GuildID = :id")
+                        .withExpressionAttributeValues(expressionAttributeValues));
+
+                for (Map<String, AttributeValue> row : result.getItems()) {
+                    roleEmotes.put(row.get("EmoteID").getS(), guild.getRoleById(row.get("RoleID").getS()));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

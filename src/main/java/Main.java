@@ -55,6 +55,5 @@ public class Main {
         jdaBuilder.addEventListeners(new PresenceListener(voiceChannelManager));
 
         jdaBuilder.build();
-
     }
 }

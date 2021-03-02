@@ -1,6 +1,6 @@
 # RandomBot
 ## Overview
-This is a simple discord bot that manages voice channels, roles, and has a few minigames.  It is worth noting that much of this is hard-coded as I do not have a web-based front end nor a database to store guild information for different guilds using the bot.
+This is a simple discord bot that manages voice channels, roles, and has a few minigames.  Ideally when this bot is finished, it will back up important data for each guild like role/emote combinations, reaction message ids, quotes from the quotes minigame, RL mafia stants/standings, etc.
 
 ### Voice Channel Management
 - Features an "on demand" voice channel system where users join a single on-demand channel and the bot creates a new voice channel (VC) and moves the user to the new VC.

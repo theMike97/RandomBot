@@ -12,9 +12,12 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class RoleManager {
 
@@ -44,12 +47,21 @@ public class RoleManager {
      * @param guild     The guild for which the message id is set
      * @param messageId The message id
      */
-    public void setRoleAssignmentMessage(Guild guild, String messageId) {
-        roleAssignmentMessageId = messageId;
-        Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
-        reactionMessageTable.putItem(new Item()
-                .withPrimaryKey("GuildID", guild.getId())
-                .withString("ReactionMessageID", messageId));
+    public boolean setRoleAssignmentMessage(Guild guild, @NotNull String messageId) {
+        if (!messageId.equals(roleAssignmentMessageId)) {
+            roleAssignmentMessageId = messageId;
+            try {
+                Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
+                reactionMessageTable.putItem(new Item()
+                        .withPrimaryKey("GuildID", guild.getId())
+                        .withString("ReactionMessageID", messageId));
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -69,19 +81,28 @@ public class RoleManager {
      *
      * @param role          The role that should be associated with the emoteString
      * @param emoteString   A string that identifies and emote/emoji
+     * @return              True if add was successful
      */
-    public void addRoleEmoteLink(Role role, String emoteString) {
+    public boolean addRoleEmoteLink(Role role, String emoteString) {
         Guild guild = role.getGuild();
-        roleEmotes.put(emoteString, role);
+        if (!roleEmotes.containsKey(emoteString)) {
+            roleEmotes.put(emoteString, role);
 
-        Table reactionEmotesTable = dynamoDB.getTable("RoleReactionEmotes");
-        reactionEmotesTable.putItem(new Item()
-                .withPrimaryKey("GuildID", guild.getId(), "EmoteID", emoteString)
-                .withString("RoleID", role.getId()));
-        System.out.println("Added (GuildId, EmoteId, RoleName): ("
-                + guild.getId() + ", "
-                + emoteString + ", "
-                + role.getName() + ")");
+            try {
+                Table reactionEmotesTable = dynamoDB.getTable("RoleReactionEmotes");
+                reactionEmotesTable.putItem(new Item()
+                        .withPrimaryKey("GuildID", guild.getId(), "EmoteID", emoteString)
+                        .withString("RoleID", role.getId()));
+                System.out.println("Added (GuildId, EmoteId, RoleName): ("
+                        + guild.getId() + ", "
+                        + emoteString + ", "
+                        + role.getName() + ")");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -92,19 +113,26 @@ public class RoleManager {
      *
      * @param role          The role that should be associated with the emoteString
      * @param emoteString   A string that identifies and emote/emoji
+     * @return              true if remove was successful
      */
-    public void removeRoleEmoteLink(Role role, String emoteString) {
+    public boolean removeRoleEmoteLink(Role role, String emoteString) {
         Guild guild = role.getGuild();
-        roleEmotes.remove(emoteString, role);
+        if (roleEmotes.containsKey(emoteString)) {
+            if (roleEmotes.get(emoteString).equals(role)) {
+                roleEmotes.remove(emoteString, role);
 
-        Table reactionEmotesTable = dynamoDB.getTable("RoleReactionEmotes");
-        try {
-            reactionEmotesTable.deleteItem(new DeleteItemSpec()
-                    .withPrimaryKey(new PrimaryKey("GuildID", guild.getId(), "EmoteID", emoteString)));
+                Table reactionEmotesTable = dynamoDB.getTable("RoleReactionEmotes");
+                try {
+                    reactionEmotesTable.deleteItem(new DeleteItemSpec()
+                            .withPrimaryKey(new PrimaryKey("GuildID", guild.getId(), "EmoteID", emoteString)));
 
-        } catch (Exception e) {
-            e.printStackTrace();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return true;
+            }
         }
+        return false;
     }
 
     /**
@@ -123,6 +151,7 @@ public class RoleManager {
      */
     public void addToRoleFromEmote(String emoteString, Member member) {
         Guild guild = member.getGuild();
+
         try {
             Role role = roleEmotes.get(emoteString);
             guild.addRoleToMember(member, role).queue();
@@ -192,5 +221,4 @@ public class RoleManager {
             }
         }
     }
-
 }

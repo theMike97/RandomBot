@@ -33,6 +33,7 @@ public class ReactionListener extends ListenerAdapter {
             if (reactedMessage.getId().equals(rm.getRoleAssignmentMessageId())) {
 
                 rm.syncRoleReactionEmotesTable(guild); // will sync if roleEmotes is null
+                System.out.println(reactionEmoteString);
                 if (rm.isInEmoteList(reactionEmoteString)) {
 
                     rm.addToRoleFromEmote(reactionEmoteString, member);

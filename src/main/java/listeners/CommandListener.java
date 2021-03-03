@@ -1,5 +1,8 @@
 package listeners;
 
+import com.vdurmont.emoji.Emoji;
+import com.vdurmont.emoji.EmojiManager;
+import com.vdurmont.emoji.EmojiParser;
 import managers.QuotesManager;
 import managers.RoleManager;
 import managers.VoiceChannelManager;
@@ -9,6 +12,7 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,7 +71,7 @@ public class CommandListener extends ListenerAdapter {
         if (message.getChannelType().isGuild() && !user.isBot()) {
             Guild guild = event.getGuild();
             Member member = event.getMember();
-            if (member == null || guild == null) return;
+            if (member == null) return;
 
             VoiceChannel vc = (member.getVoiceState() == null) ? null : member.getVoiceState().getChannel();
             TextChannel defaultChannel = event.getTextChannel();
@@ -84,7 +88,7 @@ public class CommandListener extends ListenerAdapter {
                         defaultChannel.sendMessage(INVALID_PERMS_MESSAGE).queue();
                         return;
                     }
-                    System.out.println(extractRoleId(args[0]));
+                    System.out.println(extractEmoteId(args[0]));
                     break;
 
                 case COMMAND_FLAG + ROLE_REACTION_ID_COMMAND:
@@ -103,8 +107,13 @@ public class CommandListener extends ListenerAdapter {
                     }
 
                     rm.syncReactionMessageTable(guild);
-                    rm.setRoleAssignmentMessage(guild, args[0]);
-                    System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId());
+                    if (rm.setRoleAssignmentMessage(guild, args[0])) {
+                        System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId());
+                        defaultChannel.sendMessage("Role assignment message id set to " + rm.getRoleAssignmentMessageId()).queue();
+                    } else {
+                        System.out.println("Role assignment message id not set.");
+                        defaultChannel.sendMessage("Role assignment message id not set.").queue();
+                    }
                     break;
 
                 case COMMAND_FLAG + ADD_ROLE_EMOTE_LINK:
@@ -113,23 +122,34 @@ public class CommandListener extends ListenerAdapter {
                         return;
                     }
                     if (args.length != 2) {
-                        defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
+                        defaultChannel.sendMessage("Args mismatch.  Make sure you only have 2 arguments: emote and role.  " +
+                                "Type `!help " + REMOVE_ROLE_EMOTE_LINK + "` for usage.").queue();
+                        System.out.println("args mismatch");
                         return;
                     }
-                    // we didn't use an emote
-                    if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find()) {
+                    // we didn't use an emote/emoji
+                    System.out.println(EmojiManager.isEmoji(args[0]));
+                    if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find() &&
+                            !EmojiManager.isEmoji(args[0])) {
                         defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
+                        System.out.println("malformed emote/emoji");
                         return;
                     }
                     // we didn't use '@role' syntax
-                    if (Pattern.compile("^<@&[0-9]+>$").matcher(args[1]).find()) {
-                        defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
+                    if (!Pattern.compile("^<@&[0-9]+>$").matcher(args[1]).find()) {
+                        defaultChannel.sendMessage("Bad role.  Make sure you spelled the role correctly using `@role` syntax.").queue();
+                        System.out.println("malformed role");
                         return;
                     }
 
                     rm.syncRoleReactionEmotesTable(guild);
-                    rm.addRoleEmoteLink(guild.getRoleById(extractRoleId(args[1])), extractEmoteId(args[0]));
-                    System.out.println("Added (emote, role) (" + args[0] + ", " + args[1] + ")");
+                    if (rm.addRoleEmoteLink(guild.getRoleById(extractRoleId(args[1])), extractEmoteId(args[0]))) {
+                        System.out.println("Added (emote, role) (" + args[0] + ", " + args[1] + ")");
+                        defaultChannel.sendMessage("Added (emote, role) (" + args[0] + ", " + args[1] + ")").queue();
+                    } else {
+                        System.out.println("Add (emote, role) failed.  Already exists.");
+                        defaultChannel.sendMessage("That emote-role link already exists.").queue();
+                    }
                     break;
 
                 case COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK:
@@ -138,23 +158,33 @@ public class CommandListener extends ListenerAdapter {
                         return;
                     }
                     if (args.length != 2) {
-                        defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
+                        defaultChannel.sendMessage("Args mismatch.  Make sure you only have 2 arguments: emote and role.  " +
+                                "Type `!help " + REMOVE_ROLE_EMOTE_LINK + "` for usage.").queue();
+                        System.out.println("args mismatch");
                         return;
                     }
                     // we didn't use an emote
-                    if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find()) {
+                    if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find() &&
+                            !EmojiManager.isEmoji(args[0])) {
                         defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
+                        System.out.println("malformed emote/emoji");
                         return;
                     }
-                    // we didn't use an id
-                    if (Pattern.compile("^[0-9]").matcher(args[1]).find()) {
-                        defaultChannel.sendMessage(INVALID_ID_MESSAGE).queue();
+                    // we didn't use '@role' syntax
+                    if (!Pattern.compile("^<@&[0-9]+>$").matcher(args[1]).find()) {
+                        defaultChannel.sendMessage("Bad role.  Make sure you spelled the role correctly using `@role` syntax.").queue();
+                        System.out.println("malformed role");
                         return;
                     }
 
                     rm.syncRoleReactionEmotesTable(guild);
-                    rm.removeRoleEmoteLink(guild.getRoleById(extractRoleId(args[1])), extractEmoteId(args[0]));
-                    System.out.println("Removed (emote, role) (" + args[0] + ", " + args[1] + ")");
+                    if (rm.removeRoleEmoteLink(guild.getRoleById(extractRoleId(args[1])), extractEmoteId(args[0]))) {
+                        System.out.println("Removed (emote, role) (" + extractEmoteId(args[0]) + ", " + args[1] + ")");
+                        defaultChannel.sendMessage("Removed (emote, role) (" + extractEmoteId(args[0]) + ", " + args[1] + ")").queue();
+                    } else {
+                        System.out.println("Emote-Role remove failed.");
+                        defaultChannel.sendMessage("Emote-Role remove failed.").queue();
+                    }
                     break;
 
                 // everyone commands
@@ -196,8 +226,10 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + " [:emote:] [role id]",
-                                        "Link a reaction emote/emoji to a role.",
+                                embedBuilder.addField(COMMAND_FLAG + ADD_ROLE_EMOTE_LINK + " [:emote:] [@role]",
+                                        "Link a reaction emote/emoji to a role.  Upon successful completion," +
+                                                " reacting to the react message with [:emote:] will assign you" +
+                                                " the associated role.",
                                         false);
                                 break;
 
@@ -205,10 +237,10 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.clear();
                                 embedBuilder.setTitle("RandomBot \"" + COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK + "\" Command");
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
-                                embedBuilder.addField(COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK + " [:emote:] [role id]",
+                                embedBuilder.addField(COMMAND_FLAG + REMOVE_ROLE_EMOTE_LINK + " [:emote:] [@role]",
                                         "Remove link between an emote and its associated role.  Upon successful completion," +
-                                                "reacting to the react message with [:emote:] will no longer assign you" +
-                                                "to a role.",
+                                                " reacting to the react message with [:emote:] will no longer assign you" +
+                                                " to a role.",
                                         false);
                                 break;
                                 // everyone commands
@@ -218,8 +250,8 @@ public class CommandListener extends ListenerAdapter {
                                 embedBuilder.setDescription("Requested by " + user.getAsMention());
                                 embedBuilder.addField(COMMAND_FLAG + HELP_COMMAND + " ?[command]",
                                         "If [command] is present, RandomBot will send a message detailing the usage" +
-                                                "and applications of [command].  Otherwise, RandomBot will send a message" +
-                                                "enumerating all commands available to the user.",
+                                                " and applications of [command].  Otherwise, RandomBot will send a message" +
+                                                " enumerating all commands available to the user.",
                                         false);
                                 break;
 
@@ -395,12 +427,22 @@ public class CommandListener extends ListenerAdapter {
     private String extractRoleId(String rawRoleString) {
         Matcher matcher = Pattern.compile("^<@&([0-9]+)>$").matcher(rawRoleString);
         matcher.find();
-        return matcher.group(1);
+        String emoteId = matcher.group(1);
+
+        return emoteId;
     }
 
-    private String extractEmoteId(String rawEmoteString) {
-        Matcher matcher = Pattern.compile("^<:[a-zA-Z0-9_]+:([0-9]+)>$").matcher(rawEmoteString);
-        matcher.find();
-        return matcher.group(1);
+    private String extractEmoteId(String rawEmojiString) {
+        String emojiCodePoints;
+        if (EmojiManager.isEmoji(rawEmojiString)) {
+            emojiCodePoints = EmojiParser.parseToHtmlHexadecimal(rawEmojiString);
+            emojiCodePoints = emojiCodePoints.replaceAll("&#x", "U+");
+            emojiCodePoints = emojiCodePoints.replaceAll(";", "");
+        } else {
+            Matcher matcher = Pattern.compile("^<:[a-zA-Z0-9_]+:([0-9]+)>$").matcher(rawEmojiString);
+            matcher.find();
+            emojiCodePoints = matcher.group(1);
+        }
+        return emojiCodePoints;
     }
 }

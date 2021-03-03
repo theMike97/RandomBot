@@ -15,9 +15,7 @@ import net.dv8tion.jda.api.entities.Role;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class RoleManager {
 
@@ -214,7 +212,10 @@ public class RoleManager {
                         .withExpressionAttributeValues(expressionAttributeValues));
 
                 for (Map<String, AttributeValue> row : result.getItems()) {
-                    roleEmotes.put(row.get("EmoteID").getS(), guild.getRoleById(row.get("RoleID").getS()));
+                    String emoteS = row.get("EmoteID").getS();
+                    String roleS = row.get("RoleID").getS();
+                    roleEmotes.put(emoteS, guild.getRoleById(roleS));
+                    System.out.println("Retrieved role-emote link: (" + emoteS + ", " + roleS + ")");
                 }
             } catch (Exception e) {
                 e.printStackTrace();

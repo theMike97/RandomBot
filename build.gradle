@@ -19,7 +19,7 @@ jar {
 }
 
 group 'com.mllauderback'
-version '1.0'
+version '0.2a'
 
 repositories {
     mavenCentral()

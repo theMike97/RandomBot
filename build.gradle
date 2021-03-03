@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClassName = 'Main'
+    mainClass.set("Main")
 }
 
 jar {
@@ -13,11 +13,12 @@ jar {
     }
 
     from {
-        configurations.compile.collect {it.isDirectory() ? it : zipTree(it)}
+        // I need to resolve this deprecation but I don't feel like doing that now.
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
 
-group 'org.example'
+group 'com.mllauderback'
 version '1.0'
 
 repositories {

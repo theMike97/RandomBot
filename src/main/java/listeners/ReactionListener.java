@@ -45,7 +45,7 @@ public class ReactionListener extends ListenerAdapter {
     @Override
     public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
         Message reactedMessage = event.retrieveMessage().complete();
-        Member member = event.getMember();
+        String uid = event.getUserId();
         String reactionEmoteString;
 
         if (event.getReactionEmote().isEmote()) {
@@ -62,8 +62,8 @@ public class ReactionListener extends ListenerAdapter {
                 rm.syncRoleReactionEmotesTable(event.getGuild()); // will sync if roleEmotes is null
                 if (rm.isInEmoteList(reactionEmoteString)) {
 
-                    assert member != null;
-                    rm.removeFromRoleFromEmote(reactionEmoteString, member);
+                    assert uid != null;
+                    rm.removeFromRoleFromEmote(event.getGuild(), reactionEmoteString, uid);
                 }
             }
         }

@@ -165,17 +165,19 @@ public class RoleManager {
     /**
      *
      * @param emoteString
-     * @param member
+     * @param uid
      */
-    public void removeFromRoleFromEmote(String emoteString, Member member) {
-        Guild guild = member.getGuild();
+    public void removeFromRoleFromEmote(Guild guild, String emoteString, String uid) {
         try {
             Role role = roleEmotes.get(emoteString);
-            guild.removeRoleFromMember(member, role).queue();
+            guild.removeRoleFromMember(uid, role).queue();
 //            System.out.println(member.getUser().getName() + " removed from " + role.getName() + " role.");
-            member.getUser().openPrivateChannel().queue((channel) ->
-                    channel.sendMessage("You were removed from the " + role.getName() + " role!"
-                    ).queue());
+            Member member = guild.retrieveMemberById(uid).complete();
+            if (member != null) {
+                member.getUser().openPrivateChannel().queue((channel) ->
+                        channel.sendMessage("You were removed from the " + role.getName() + " role!"
+                        ).queue());
+            }
         } catch (NullPointerException ex) {
             System.err.println("Emote reaction does not point to a valid role.");
         }

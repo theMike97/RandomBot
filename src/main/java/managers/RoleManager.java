@@ -12,6 +12,8 @@ import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.exceptions.ErrorHandler;
+import net.dv8tion.jda.api.requests.ErrorResponse;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
@@ -154,10 +156,14 @@ public class RoleManager {
             Role role = roleEmotes.get(emoteString);
             guild.addRoleToMember(member, role).queue();
 //            System.out.println(member.getUser().getName() + " added to " + role.getName() + " role.");
-            member.getUser().openPrivateChannel().queue((channel) ->
-                    channel.sendMessage("You were added to the " + role.getName() + " role!"
-                    ).queue());
-        } catch (NullPointerException ex) {
+            member.getUser().openPrivateChannel()
+                    .flatMap(channel -> channel.sendMessage("You were added to the " + role.getName() + " role!"))
+                    .queue(null, new ErrorHandler()
+                            .handle(ErrorResponse.CANNOT_SEND_TO_USER,
+                                    (e) -> System.out.println("Could not send DM to " + member.getUser().getAsTag()
+                                            + " (may have us blocked).")));
+
+        } catch (NullPointerException e) {
             System.err.println("Emote reaction does not point to a valid role.");
         }
     }
@@ -174,9 +180,12 @@ public class RoleManager {
 //            System.out.println(member.getUser().getName() + " removed from " + role.getName() + " role.");
             Member member = guild.retrieveMemberById(uid).complete();
             if (member != null) {
-                member.getUser().openPrivateChannel().queue((channel) ->
-                        channel.sendMessage("You were removed from the " + role.getName() + " role!"
-                        ).queue());
+                member.getUser().openPrivateChannel()
+                        .flatMap(channel -> channel.sendMessage("You were removed from the " + role.getName() + " role!"))
+                        .queue(null, new ErrorHandler()
+                                .handle(ErrorResponse.CANNOT_SEND_TO_USER,
+                                        (e) -> System.out.println("Could not send DM to " + member.getUser().getAsTag()
+                                                + " (may have us blocked).")));
             }
         } catch (NullPointerException ex) {
             System.err.println("Emote reaction does not point to a valid role.");

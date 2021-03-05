@@ -4,6 +4,7 @@ import managers.RoleManager;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionRemoveEvent;
+import net.dv8tion.jda.api.exceptions.ContextException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 public class ReactionListener extends ListenerAdapter {
@@ -62,7 +63,6 @@ public class ReactionListener extends ListenerAdapter {
                 rm.syncRoleReactionEmotesTable(event.getGuild()); // will sync if roleEmotes is null
                 if (rm.isInEmoteList(reactionEmoteString)) {
 
-                    assert uid != null;
                     rm.removeFromRoleFromEmote(event.getGuild(), reactionEmoteString, uid);
                 }
             }

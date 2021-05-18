@@ -124,7 +124,7 @@ public class CommandListener extends ListenerAdapter {
                     if (args.length != 2) {
                         defaultChannel.sendMessage("Args mismatch.  Make sure you only have 2 arguments: emote and role.  " +
                                 "Type `!help " + REMOVE_ROLE_EMOTE_LINK + "` for usage.").queue();
-                        System.out.println("args mismatch");
+                        System.out.println("Role-emote link failed: args mismatch.");
                         return;
                     }
                     // we didn't use an emote/emoji
@@ -132,13 +132,13 @@ public class CommandListener extends ListenerAdapter {
                     if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find() &&
                             !EmojiManager.isEmoji(args[0])) {
                         defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
-                        System.out.println("malformed emote/emoji");
+                        System.out.println("Role-emote link failed: invalid emote/emoji.");
                         return;
                     }
                     // we didn't use '@role' syntax
                     if (!Pattern.compile("^<@&[0-9]+>$").matcher(args[1]).find()) {
                         defaultChannel.sendMessage("Bad role.  Make sure you spelled the role correctly using `@role` syntax.").queue();
-                        System.out.println("malformed role");
+                        System.out.println("Role-emote link failed: invalid role.");
                         return;
                     }
 
@@ -147,7 +147,7 @@ public class CommandListener extends ListenerAdapter {
                         System.out.println("Added (emote, role) (" + args[0] + ", " + args[1] + ")");
                         defaultChannel.sendMessage("Added (emote, role) (" + args[0] + ", " + args[1] + ")").queue();
                     } else {
-                        System.out.println("Add (emote, role) failed.  Already exists.");
+                        System.out.println("Role-emote link failed: already exists.");
                         defaultChannel.sendMessage("That emote-role link already exists.").queue();
                     }
                     break;
@@ -160,20 +160,20 @@ public class CommandListener extends ListenerAdapter {
                     if (args.length != 2) {
                         defaultChannel.sendMessage("Args mismatch.  Make sure you only have 2 arguments: emote and role.  " +
                                 "Type `!help " + REMOVE_ROLE_EMOTE_LINK + "` for usage.").queue();
-                        System.out.println("args mismatch");
+                        System.out.println("Remove role-emote link failed: args mismatch.");
                         return;
                     }
                     // we didn't use an emote
                     if (!Pattern.compile("^<:[a-zA-Z0-9_]+:[0-9]+>$").matcher(args[0]).find() &&
                             !EmojiManager.isEmoji(args[0])) {
                         defaultChannel.sendMessage(INVALID_EMOTE_MESSAGE).queue();
-                        System.out.println("malformed emote/emoji");
+                        System.out.println("Remove role-emote link failed: invalid emote/emoji.");
                         return;
                     }
                     // we didn't use '@role' syntax
                     if (!Pattern.compile("^<@&[0-9]+>$").matcher(args[1]).find()) {
                         defaultChannel.sendMessage("Bad role.  Make sure you spelled the role correctly using `@role` syntax.").queue();
-                        System.out.println("malformed role");
+                        System.out.println("Remove role-emote link failed: invalid role.");
                         return;
                     }
 
@@ -317,7 +317,7 @@ public class CommandListener extends ListenerAdapter {
                         // quote should be in ""
                         // followed by the author
                         if (!args[0].startsWith("\"")) {
-                            defaultChannel.sendMessage("Quote not formatted correctly! (1)").queue();
+                            defaultChannel.sendMessage("Quote not formatted correctly: must start with double quotes.").queue();
                             return;
                         }
                         String[] quoteData = new String[2];
@@ -335,7 +335,7 @@ public class CommandListener extends ListenerAdapter {
                             }
                         }
                         if (!endQuoteMark) {
-                            defaultChannel.sendMessage("Quote not formatted correctly! (2)").queue();
+                            defaultChannel.sendMessage("Quote not formatted correctly: must have closing double quotes.").queue();
                             return;
                         }
                         quoteText = quoteText.substring(1, quoteText.length() - 2);
@@ -354,7 +354,7 @@ public class CommandListener extends ListenerAdapter {
                         quoteData[1] = author;
 
                         try {
-                            qm.addQuote(guild, quoteData);
+                            qm.addQuote(member, quoteData);
                         } catch (Exception e) {
                             e.printStackTrace();
                             defaultChannel.sendMessage("Quote add failed.").queue();
@@ -363,7 +363,7 @@ public class CommandListener extends ListenerAdapter {
                         // build embedded message and send
                         embedBuilder.setTitle("Quote Added");
                         embedBuilder.addField("\"" + quoteData[0] + "\"", "-" + quoteData[1], false);
-                        System.out.println("Quote added.");
+//                        System.out.println("quote added.");
                     }
                     defaultChannel.sendMessage(embedBuilder.build()).queue();
                     break;
@@ -373,6 +373,7 @@ public class CommandListener extends ListenerAdapter {
                         if (args.length == 0) {
                             vc.getManager().setUserLimit(0).queue();
                             defaultChannel.sendMessage("Reset user limit.").queue();
+                            System.out.println(member.getUser().getAsTag() + " reset user limit for voice channel \"" + vc.getName() + "\" (" + vc.getId() + ").");
                         } else if (args.length == 1) {
                             int maxUsers = 0;
                             try {
@@ -384,17 +385,22 @@ public class CommandListener extends ListenerAdapter {
                                 if (vcm.isCreatedVoiceChannel(vc)) {
                                     vc.getManager().setUserLimit(maxUsers).queue();
                                     defaultChannel.sendMessage("Set max users to " + maxUsers + "!").queue();
+                                    System.out.println(member.getUser().getAsTag() + " set user limit for voice channel \"" + vc.getName() + "\" (" + vc.getId() + ") to " + maxUsers + ".");
                                 } else {
                                     defaultChannel.sendMessage("Can only change user limit of on-demand channels.").queue();
+                                    System.out.println("User limit on voice channel \"" + vc.getName() + "\" (" + vc.getId() + ") failed: not an on-demand channel.");
                                 }
                             } else {
                                 defaultChannel.sendMessage("Number of users must be a positive integer.").queue();
+                                System.out.println("User limit on voice channel \"" + vc.getName() + "\" (" + vc.getId() + ") failed: not a positive integer.");
                             }
                         } else {
                             defaultChannel.sendMessage("Incorrect usage of `" + command + "`.").queue();
+                            System.out.println("User limit on voice channel \"" + vc.getName() + "\" (" + vc.getId() + ") failed: incorrect number of arguments.");
                         }
                     } else {
                         defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();
+                        System.out.println("User limit on voice channel \"" + vc.getName() + "\" (" + vc.getId() + ") failed: user not in the voice channel.");
                     }
                     break;
 
@@ -410,7 +416,7 @@ public class CommandListener extends ListenerAdapter {
                                 String customTitle = "";
                                 for (String word : args) customTitle += word + " ";
                                 customTitle = customTitle.substring(0, customTitle.length() - 1);
-                                vcm.setCustomChannelName(vc, customTitle);
+                                vcm.setCustomChannelName(member, vc, customTitle);
                                 defaultChannel.sendMessage("Changed title to " + customTitle).queue();
                             }
                         } else {

@@ -29,14 +29,15 @@ public class Main {
      */
 
     public static void main(String[] args) throws LoginException {
-        JDABuilder jdaBuilder = JDABuilder.createDefault(Secrets.TOKEN);
+//        JDABuilder jdaBuilder = JDABuilder.createDefault(Secrets.OFFICIAL_TOKEN);
+        JDABuilder jdaBuilder = JDABuilder.createDefault(Secrets.BETA_TOKEN);
         jdaBuilder.setActivity(Activity.playing("Type !help for commands"));
 
         ProfileCredentialsProvider provider = new ProfileCredentialsProvider();
         try {
             provider.getCredentials();
         } catch (Exception e) {
-            jdaBuilder.setActivity(Activity.playing("Not connected to DB"));
+            jdaBuilder.setActivity(Activity.playing("Not connected to Database - See exception:"));
             throw new AmazonClientException("Could not fetch credentials.");
         }
 

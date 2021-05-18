@@ -22,12 +22,13 @@ public class RoleManager {
     // <key, value> = <emoteId, role>
     private HashMap<String, Role> roleEmotes;
 
-    private String roleAssignmentMessageId;
+    private HashMap<String, String> guildRoleAssignmentMessages;
+//    private String roleAssignmentMessageId;
     private final AmazonDynamoDB client;
     private final DynamoDB dynamoDB;
 
     public RoleManager(ProfileCredentialsProvider provider) {
-        roleAssignmentMessageId = null;
+        guildRoleAssignmentMessages = new HashMap<>();
         roleEmotes = new HashMap<>();
 
         client = AmazonDynamoDBClientBuilder.standard()
@@ -46,19 +47,20 @@ public class RoleManager {
      * @param messageId The message id
      */
     public boolean setRoleAssignmentMessage(Guild guild, @NotNull String messageId) {
-        // TODO use database instead of local variable.
-        if (!messageId.equals(roleAssignmentMessageId)) {
-            roleAssignmentMessageId = messageId;
-            try {
-                Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
-                reactionMessageTable.putItem(new Item()
-                        .withPrimaryKey("GuildID", guild.getId())
-                        .withString("ReactionMessageID", messageId));
-            } catch (Exception e) {
-                e.printStackTrace();
-                return false;
+        if (!guildRoleAssignmentMessages.isEmpty()) {
+            if (!messageId.equals(guildRoleAssignmentMessages.get(guild.getId()))) {
+                guildRoleAssignmentMessages.put(guild.getId(), messageId);
+                try {
+                    Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
+                    reactionMessageTable.putItem(new Item()
+                            .withPrimaryKey("GuildID", guild.getId())
+                            .withString("ReactionMessageID", messageId));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return false;
+                }
+                return true;
             }
-            return true;
         }
         return false;
     }
@@ -68,9 +70,8 @@ public class RoleManager {
      *
      * @return  Reaction message Id
      */
-    public String getRoleAssignmentMessageId() {
-        // TODO make this a database query
-        return roleAssignmentMessageId;
+    public String getRoleAssignmentMessageId(Guild guild) {
+        return guildRoleAssignmentMessages.get(guild.getId());
     }
 
     /**
@@ -185,9 +186,9 @@ public class RoleManager {
         }
     }
 
-    // if messageId is null, pull data from table
+    // if guildRoleAssignmentMessages is empty, pull from table
     public void syncReactionMessageTable(Guild guild) {
-        if (roleAssignmentMessageId == null) {
+        if (guildRoleAssignmentMessages.isEmpty()) {
             Table reactionMessageTable = dynamoDB.getTable("ReactionMessage");
             Map<String, Object> valueMap = new HashMap<>();
             valueMap.put(":guildId", guild.getId());
@@ -196,8 +197,10 @@ public class RoleManager {
                 ItemCollection<QueryOutcome> items = reactionMessageTable.query(new QuerySpec().withKeyConditionExpression("GuildID = :guildId")
                         .withValueMap(valueMap));
                 for (Item item : items) {
-                    roleAssignmentMessageId = item.getString("ReactionMessageID");
-                    System.out.println("Retrieved message ID: " + roleAssignmentMessageId);
+                    String guildId = item.getString("GuildID");
+                    String messageId = item.getString("ReactionMessageID");
+                    guildRoleAssignmentMessages.put(guildId, messageId);
+                    System.out.println("Retrieved message ID for guild " + guildId + ": " + messageId);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

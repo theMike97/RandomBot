@@ -108,8 +108,8 @@ public class CommandListener extends ListenerAdapter {
 
                     rm.syncReactionMessageTable(guild);
                     if (rm.setRoleAssignmentMessage(guild, args[0])) {
-                        System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId());
-                        defaultChannel.sendMessage("Role assignment message id set to " + rm.getRoleAssignmentMessageId()).queue();
+                        System.out.println("Role assignment message id set to " + rm.getRoleAssignmentMessageId(guild));
+                        defaultChannel.sendMessage("Role assignment message id set to " + rm.getRoleAssignmentMessageId(guild)).queue();
                     } else {
                         System.out.println("Role assignment message id not set.");
                         defaultChannel.sendMessage("Role assignment message id not set.").queue();

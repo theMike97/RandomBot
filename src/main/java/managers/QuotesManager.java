@@ -28,9 +28,10 @@ public class QuotesManager {
         dynamoDB = new DynamoDB(client);
     }
 
-    public void addQuote(Guild guild, String[] quoteData) {
+    public void addQuote(Member member, String[] quoteData) {
         // send quote message to quotes channel
-        System.out.println("Adding quote...");
+        System.out.println(member.getUser().getAsTag() + " added quote \"'" + quoteData[0] + "' -" + quoteData[1] + "\".");
+        Guild guild = member.getGuild();
 
         dynamoDB.getTable("Quotes").putItem(new Item()
                 .withPrimaryKey("GuildID", guild.getId(), "QuoteID", UUID.randomUUID().toString())

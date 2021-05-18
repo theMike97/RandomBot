@@ -205,11 +205,11 @@ public class VoiceChannelManager {
         return voiceChannels.get(index);
     }
 
-    public void addVoiceChannel(VoiceChannel vc, String genericName) {
+    public void addVoiceChannel(Member member, VoiceChannel vc, String genericName) {
         voiceChannels.add(vc);
         vcNameCache.put(vc.getId(), genericName); // remember randomly generated voice name in case ppl stop playing a game
         customTitleMap.put(vc.getId(), STANDARD_TITLE);
-        System.out.println("\"" + vc.getName() + "\" created.");
+        System.out.println(member.getUser().getAsTag() + " created new on-demand channel \"" + vc.getName() + "\".");
         System.out.println("vcNameCache current state: " + vcNameCache);
     }
 
@@ -240,7 +240,7 @@ public class VoiceChannelManager {
         String vcName = (primaryActivity == null) ? genericName : primaryActivity.getName();
 
         guild.createVoiceChannel(vcName, category).queue(voiceChannel -> {
-            addVoiceChannel(voiceChannel, genericName);
+            addVoiceChannel(member, voiceChannel, genericName);
             guild.moveVoiceMember(member, guild.getVoiceChannelById(voiceChannel.getId())).queue();
         });
     }
@@ -315,17 +315,17 @@ public class VoiceChannelManager {
                 }
             }
         }
-        System.out.println("Activities Map for VC " + voiceChannel.getId() + ": " + activityMap);
+        System.out.println("Activities Map for VC \"" + voiceChannel.getName() + "\" (" + voiceChannel.getId() + "): " + activityMap);
 
         return primaryActivity;
     }
 
-    public void setCustomChannelName(VoiceChannel vc, String name) {
+    public void setCustomChannelName(Member member, VoiceChannel vc, String name) {
         customTitleMap.replace(vc.getId(), CUSTOM_TITLE);
         // if vc is not named correctly, name it correctly
         if (!vc.getName().equals(name)) {
             vc.getManager().setName(name).queue();
-            System.out.println("voice channel name changed to \"" + name + "\".");
+            System.out.println(member.getUser().getAsTag() + " changed voice channel " + vc.getId() + " name to \"" + name + "\".");
         }
     }
 
@@ -351,7 +351,7 @@ public class VoiceChannelManager {
                 // if there is no game being played, set to original random name
                 vc.getManager().setName(vcNameCache.get(vc.getId())).queue();
             }
-            System.out.println("voice channel name changed.");
+            System.out.println("Random Manager changed voice channel " + vc.getId() + " to name \"" + vc.getName() + "\".");
         }
     }
 }

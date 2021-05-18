@@ -48,6 +48,7 @@ public class RoleManager {
      * @param messageId The message id
      */
     public boolean setRoleAssignmentMessage(Guild guild, @NotNull String messageId) {
+        // TODO use database instead of local variable.
         if (!messageId.equals(roleAssignmentMessageId)) {
             roleAssignmentMessageId = messageId;
             try {
@@ -70,6 +71,7 @@ public class RoleManager {
      * @return  Reaction message Id
      */
     public String getRoleAssignmentMessageId() {
+        // TODO make this a database query
         return roleAssignmentMessageId;
     }
 
@@ -155,16 +157,12 @@ public class RoleManager {
         try {
             Role role = roleEmotes.get(emoteString);
             guild.addRoleToMember(member, role).queue();
-//            System.out.println(member.getUser().getName() + " added to " + role.getName() + " role.");
-            member.getUser().openPrivateChannel()
-                    .flatMap(channel -> channel.sendMessage("You were added to the " + role.getName() + " role!"))
-                    .queue(null, new ErrorHandler()
-                            .handle(ErrorResponse.CANNOT_SEND_TO_USER,
-                                    (e) -> System.out.println("Could not send DM to " + member.getUser().getAsTag()
-                                            + " (may have us blocked).")));
-
-        } catch (NullPointerException e) {
-            System.err.println("Emote reaction does not point to a valid role.");
+            System.out.println(member.getUser().getAsTag() + " added to " + role.getName() + " role.");
+            member.getUser().openPrivateChannel().queue((channel) ->
+                    channel.sendMessage("You were added to the " + role.getName() + " role!"
+                    ).queue());
+        } catch (NullPointerException ex) {
+            System.err.println("Emote reaction \"" + emoteString + "\" does not point to a valid role.");
         }
     }
 
@@ -177,8 +175,8 @@ public class RoleManager {
         try {
             Role role = roleEmotes.get(emoteString);
             guild.removeRoleFromMember(uid, role).queue();
-//            System.out.println(member.getUser().getName() + " removed from " + role.getName() + " role.");
-            Member member = guild.retrieveMemberById(uid).complete();
+            Member member = guild.retrieveMemberById(uid).complete(); // synchronous
+            System.out.println(member.getUser().getAsTag() + " removed from " + role.getName() + " role.");
             if (member != null) {
                 member.getUser().openPrivateChannel()
                         .flatMap(channel -> channel.sendMessage("You were removed from the " + role.getName() + " role!"))
@@ -188,7 +186,7 @@ public class RoleManager {
                                                 + " (may have us blocked).")));
             }
         } catch (NullPointerException ex) {
-            System.err.println("Emote reaction does not point to a valid role.");
+            System.err.println("Emote reaction \"" + emoteString + "\" does not point to a valid role.");
         }
     }
 

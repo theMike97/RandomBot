@@ -7,11 +7,14 @@ import managers.QuotesManager;
 import managers.RoleManager;
 import managers.VoiceChannelManager;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.requests.restaction.RoleAction;
 
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -26,6 +29,8 @@ public class CommandListener extends ListenerAdapter {
     private static final String QUOTE_COMMAND = "quote";
     private static final String MAX_USERS_COMMAND = "max-users";
     private static final String TITLE_COMMAND = "title";
+    private static final String LOCK_COMMAND = "lock";
+    private static final String UNLOCK_COMMAND = "unlock";
     private static final String ROLE_REACTION_ID_COMMAND = "role-reaction-id";
     private static final String ADD_ROLE_EMOTE_LINK = "add-role-emote-link";
     private static final String REMOVE_ROLE_EMOTE_LINK = "remove-role-emote-link";
@@ -38,7 +43,9 @@ public class CommandListener extends ListenerAdapter {
             HELP_COMMAND,
             MAX_USERS_COMMAND,
             QUOTE_COMMAND,
-            TITLE_COMMAND
+            TITLE_COMMAND,
+            LOCK_COMMAND,
+            UNLOCK_COMMAND
     };
 
     // static error message variables
@@ -426,6 +433,37 @@ public class CommandListener extends ListenerAdapter {
                         defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();
                     }
                     break;
+
+                case COMMAND_FLAG + LOCK_COMMAND:
+                    if (args.length > 2) { // no args
+                        defaultChannel.sendMessage("Too many args!").queue();
+                        return;
+                    }
+                    // must be in on demand vc
+                    if (vc == null) {
+                        defaultChannel.sendMessage(MUST_BE_IN_VC_MESSAGE).queue();
+                        return;
+                    }
+                    if (!vcm.isCreatedVoiceChannel(vc)) {
+                        defaultChannel.sendMessage(MUST_BE_IN_ON_DEMAND_CHANNEL).queue();
+                        return;
+                    }
+
+                    // create unique role
+                    RoleAction liveRoleAction = guild.createRole();
+                    liveRoleAction.setName(user.getId());
+                    liveRoleAction.setHoisted(false);
+                    liveRoleAction.setMentionable(false);
+                    Role liveRole = liveRoleAction.complete();
+
+                    // assign role to user
+                    guild.addRoleToMember(member.getId(), liveRole).queue();
+
+                    vc.getManager().putPermissionOverride(guild.getSelfMember(), EnumSet.of(Permission.VIEW_CHANNEL), null).queue();
+                    // assign role to vc
+                    vc.getManager().putPermissionOverride(liveRole, EnumSet.of(Permission.VOICE_CONNECT, Permission.VOICE_MOVE_OTHERS), null).queue();
+                    // restrict everyone perms
+                    vc.getManager().putPermissionOverride(guild.getRoleById(guild.getId()), null, EnumSet.of(Permission.VOICE_CONNECT)).queue();
             }
         }
     }
